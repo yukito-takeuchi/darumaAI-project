@@ -195,6 +195,8 @@ Generate a SINGLE photorealistic photograph that shows this Daruma design as if 
 
 ${styleInstruction}
 
+Material & Surface: The doll must have a traditional Japanese lacquer (urushi) finish with a rich, glossy sheen. Show realistic light reflections and subtle specular highlights on the curved surface. The texture should look like hand-painted, high-quality lacquerware with depth and warmth in the gloss.
+
 Output: One photorealistic image only. The doll should look three-dimensional and real, with natural shadows and lighting. Preserve the design's colors, patterns, and character from the reference. No text or watermarks.
     `.trim();
 
