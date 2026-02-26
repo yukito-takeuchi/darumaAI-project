@@ -1,0 +1,5 @@
+{
+  "name": "だるまデザイン生成プロ",
+  "description": "企業品質のだるまデザインジェネレーター。Gemini 3 Pro Imageを使用し、ブランドロゴを統合した4面図のデザインシートを生成します。",
+  "requestFramePermissions": []
+}

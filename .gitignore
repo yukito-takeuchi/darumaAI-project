@@ -1,0 +1,34 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+node_modules/
+
+# Storage directories (contains sensitive data)
+backend/storage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker volumes
+postgres_data/
+backend/credentials/
