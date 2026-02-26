@@ -11,7 +11,7 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [results, setResults] = useState<GeneratedDesign[]>([]);
   const [photorealisticResults, setPhotorealisticResults] = useState<GeneratedPhotorealistic[]>([]);
-  const [photorealisticGenerating, setPhotorealisticGenerating] = useState<{ designId: string; style: PhotorealisticStyle } | null>(null);
+  const [photorealisticGenerating, setPhotorealisticGenerating] = useState<Array<{ designId: string; style: PhotorealisticStyle }>>([]);
 
   // Callback when API Key is selected/verified
   const handleApiKeyReady = () => {
@@ -22,7 +22,7 @@ const App: React.FC = () => {
     setStatus(GenerationStatus.GENERATING);
     setResults([]);
     setPhotorealisticResults([]);
-    setPhotorealisticGenerating(null);
+    setPhotorealisticGenerating([]);
 
     try {
       const generatedDesigns = await generateDarumaDesigns(request);
@@ -68,7 +68,8 @@ const App: React.FC = () => {
     style: PhotorealisticStyle,
     options?: PhotorealisticOptions
   ): Promise<void> => {
-    setPhotorealisticGenerating({ designId, style });
+    const key = { designId, style };
+    setPhotorealisticGenerating(prev => [...prev, key]);
     try {
       const photo = await generatePhotorealisticPhoto(imageUrl, designId, style, options);
       if (photo) {
@@ -81,7 +82,7 @@ const App: React.FC = () => {
       console.error("Photorealistic generation failed", error);
       alert("フォトリアル写真の生成に失敗しました。再試行してください。");
     } finally {
-      setPhotorealisticGenerating(null);
+      setPhotorealisticGenerating(prev => prev.filter(p => !(p.designId === designId && p.style === style)));
     }
   };
 

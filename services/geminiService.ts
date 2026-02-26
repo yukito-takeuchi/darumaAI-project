@@ -50,19 +50,24 @@ const generateSinglePattern = async (
       ? "Target Product Size: 5cm height (Small). Design should be bold, readable at small scale, slightly deformed or 'chibi' proportions if appropriate, but maintain traditional Daruma silhouette."
       : "Target Product Size: 11cm height (Medium/Large). Design should include intricate details, fine patterns, and high-fidelity textures suitable for a larger surface area.";
 
+    const glossyInstruction = request.glossy
+      ? `Material & Surface: The doll must have a traditional Japanese lacquer (urushi) finish with a rich, glossy sheen. Show realistic light reflections and subtle specular highlights on the curved surface. The texture should look like hand-painted, high-quality lacquerware with depth and warmth in the gloss.`
+      : `Material & Surface: The doll should have a matte, non-reflective finish. Smooth surface with subtle texture but no gloss or sheen.`;
+
     const mainPrompt = `
       Design a Japanese Daruma doll.
       Variation: Pattern ${index + 1}.
       Style Direction: ${request.style}.
       Specific Details: ${request.prompt}.
       ${sizeContext}
-      
+      ${glossyInstruction}
+
       Required Layout: Create a high-quality "Character Sheet" or "Product Design Sheet" containing EXACTLY 4 views of the SAME Daruma doll:
       1. Front View
       2. Back View
       3. Right Side View
       4. Left Side View
-      
+
       Arrange them in a clean horizontal line or a 2x2 grid on a neutral background.
       Ensure high consistency in the design across all 4 views.
       The design should be production-ready, suitable for 3D modeling or printing.

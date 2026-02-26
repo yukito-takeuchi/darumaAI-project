@@ -6,7 +6,7 @@ interface ResultsGridProps {
   results: GeneratedDesign[];
   onRefine?: (id: string, instruction: string) => Promise<void>;
   photorealisticResults?: GeneratedPhotorealistic[];
-  photorealisticGenerating?: { designId: string; style: PhotorealisticStyle } | null;
+  photorealisticGenerating?: Array<{ designId: string; style: PhotorealisticStyle }>;
   onGeneratePhotorealistic?: (designId: string, imageUrl: string, style: PhotorealisticStyle, options?: PhotorealisticOptions) => Promise<void>;
 }
 
@@ -14,7 +14,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
   results,
   onRefine,
   photorealisticResults = [],
-  photorealisticGenerating = null,
+  photorealisticGenerating = [],
   onGeneratePhotorealistic,
 }) => {
   // State to track which card is currently being edited
@@ -217,11 +217,11 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
-                            disabled={isRefining || (photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'sample')}
+                            disabled={isRefining || photorealisticGenerating.some(p => p.designId === design.id && p.style === 'sample')}
                             onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'sample', { withKeychain: !!keychainEnabled[design.id] })}
                             className="py-2 px-2 bg-stone-100 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                           >
-                            {photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'sample' ? (
+                            {photorealisticGenerating.some(p => p.designId === design.id && p.style === 'sample') ? (
                               <>
                                 <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                                 生成中
@@ -232,11 +232,11 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                           </button>
                           <button
                             type="button"
-                            disabled={isRefining || (photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'product')}
+                            disabled={isRefining || photorealisticGenerating.some(p => p.designId === design.id && p.style === 'product')}
                             onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'product', { withKeychain: !!keychainEnabled[design.id] })}
                             className="py-2 px-2 bg-stone-800 text-white rounded-lg text-xs font-bold hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                           >
-                            {photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'product' ? (
+                            {photorealisticGenerating.some(p => p.designId === design.id && p.style === 'product') ? (
                               <>
                                 <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                                 生成中

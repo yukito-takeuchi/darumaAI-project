@@ -9,6 +9,7 @@ export interface DesignRequest {
   prompt: string;
   style: string;
   size: '5cm' | '11cm';
+  glossy: boolean;
   referenceImages: ReferenceImage[];
 }
 

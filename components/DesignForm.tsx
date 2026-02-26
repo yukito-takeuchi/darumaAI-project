@@ -10,6 +10,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('');
   const [size, setSize] = useState<'5cm' | '11cm'>('5cm');
+  const [glossy, setGlossy] = useState(true);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
 
   const isGenerating = status === GenerationStatus.GENERATING;
@@ -50,6 +51,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
       prompt,
       style,
       size,
+      glossy,
       referenceImages
     });
   };
@@ -96,6 +98,30 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
               <span className="text-xs">迫力重視・詳細な描き込み</span>
             </label>
           </div>
+        </div>
+
+        {/* Glossy Toggle */}
+        <div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              role="switch"
+              aria-checked={glossy}
+              onClick={() => setGlossy(!glossy)}
+              className={`
+                relative w-11 h-6 rounded-full transition-colors
+                ${glossy ? 'bg-red-500' : 'bg-stone-300'}
+              `}
+            >
+              <div className={`
+                absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
+                ${glossy ? 'translate-x-5' : 'translate-x-0'}
+              `} />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-stone-700">光沢感（漆風グロス仕上げ）</span>
+              <p className="text-[10px] text-stone-400">{glossy ? 'ON — 艶やかな漆塗り風の光沢' : 'OFF — マットな質感'}</p>
+            </div>
+          </label>
         </div>
 
         {/* Reference Images Upload (Multiple) */}
