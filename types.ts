@@ -29,6 +29,10 @@ export enum GenerationStatus {
 /** フォトリアル写真の種類: サンプル風 / 実物・商品写真風 */
 export type PhotorealisticStyle = 'sample' | 'product';
 
+export interface PhotorealisticOptions {
+  withKeychain?: boolean;
+}
+
 export interface GeneratedPhotorealistic {
   designId: string;
   imageUrl: string;

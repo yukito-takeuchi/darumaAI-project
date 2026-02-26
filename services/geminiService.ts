@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { DesignRequest, GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle } from "../types";
+import { DesignRequest, GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle, PhotorealisticOptions } from "../types";
 
 export const generateDarumaDesigns = async (
   request: DesignRequest
@@ -175,7 +175,8 @@ export const refineDarumaDesign = async (
 export const generatePhotorealisticPhoto = async (
   designImageUrl: string,
   designId: string,
-  style: PhotorealisticStyle
+  style: PhotorealisticStyle,
+  options?: PhotorealisticOptions
 ): Promise<GeneratedPhotorealistic | null> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -189,12 +190,16 @@ export const generatePhotorealisticPhoto = async (
         ? 'Create a photorealistic photo as if this is a sample/prototype daruma doll. Soft studio lighting, neutral or light gray background, slight imperfections acceptable. Suitable for internal preview or early client presentation.'
         : 'Create a high-end product photography image of this daruma doll as if it were a finished product. Professional studio lighting, clean white or subtle gradient background, sharp focus, commercial quality. Suitable for catalogs and client presentations.';
 
+    const keychainInstruction = options?.withKeychain
+      ? `\nKeychain Attachment: The daruma doll has a small metal ring attached to the top of its head, connected to a ball chain (bead chain) keychain. The metal ring and ball chain should look realistic with a silver/chrome metallic finish. The chain hangs naturally with gravity. The doll itself should be miniature/compact sized, suitable as a keychain accessory.\n`
+      : '';
+
     const prompt = `
-This image is a design sheet (multiple views) of a Japanese Daruma doll. 
+This image is a design sheet (multiple views) of a Japanese Daruma doll.
 Generate a SINGLE photorealistic photograph that shows this Daruma design as if it were a real, physical doll.
 
 ${styleInstruction}
-
+${keychainInstruction}
 Material & Surface: The doll must have a traditional Japanese lacquer (urushi) finish with a rich, glossy sheen. Show realistic light reflections and subtle specular highlights on the curved surface. The texture should look like hand-painted, high-quality lacquerware with depth and warmth in the gloss.
 
 Output: One photorealistic image only. The doll should look three-dimensional and real, with natural shadows and lighting. Preserve the design's colors, patterns, and character from the reference. No text or watermarks.

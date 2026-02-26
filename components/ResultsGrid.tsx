@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle } from '../types';
+import { GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle, PhotorealisticOptions } from '../types';
 import { jsPDF } from "jspdf";
 
 interface ResultsGridProps {
@@ -7,7 +7,7 @@ interface ResultsGridProps {
   onRefine?: (id: string, instruction: string) => Promise<void>;
   photorealisticResults?: GeneratedPhotorealistic[];
   photorealisticGenerating?: { designId: string; style: PhotorealisticStyle } | null;
-  onGeneratePhotorealistic?: (designId: string, imageUrl: string, style: PhotorealisticStyle) => Promise<void>;
+  onGeneratePhotorealistic?: (designId: string, imageUrl: string, style: PhotorealisticStyle, options?: PhotorealisticOptions) => Promise<void>;
 }
 
 export const ResultsGrid: React.FC<ResultsGridProps> = ({
@@ -21,6 +21,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [editModeId, setEditModeId] = useState<string | null>(null);
   const [refinePrompt, setRefinePrompt] = useState<string>('');
   const [refiningIds, setRefiningIds] = useState<Set<string>>(new Set());
+  const [keychainEnabled, setKeychainEnabled] = useState<Record<string, boolean>>({});
 
   if (results.length === 0) return null;
 
@@ -204,11 +205,20 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                      <div className="mt-4 pt-4 border-t border-stone-100">
                         <p className="text-xs font-bold text-stone-600 mb-2">フォトリアル写真</p>
                         <p className="text-[10px] text-stone-400 mb-2">プレゼン・サンプルプレビュー用</p>
+                        <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!keychainEnabled[design.id]}
+                            onChange={() => setKeychainEnabled(prev => ({ ...prev, [design.id]: !prev[design.id] }))}
+                            className="w-4 h-4 accent-red-600 rounded"
+                          />
+                          <span className="text-xs text-stone-600 font-medium">キーホルダーパーツ付き</span>
+                        </label>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             disabled={isRefining || (photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'sample')}
-                            onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'sample')}
+                            onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'sample', { withKeychain: !!keychainEnabled[design.id] })}
                             className="py-2 px-2 bg-stone-100 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                           >
                             {photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'sample' ? (
@@ -223,7 +233,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                           <button
                             type="button"
                             disabled={isRefining || (photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'product')}
-                            onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'product')}
+                            onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'product', { withKeychain: !!keychainEnabled[design.id] })}
                             className="py-2 px-2 bg-stone-800 text-white rounded-lg text-xs font-bold hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                           >
                             {photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'product' ? (

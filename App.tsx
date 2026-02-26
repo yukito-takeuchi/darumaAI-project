@@ -3,7 +3,7 @@ import { ApiKeyChecker } from './components/ApiKeyChecker';
 import { Hero } from './components/Hero';
 import { DesignForm } from './components/DesignForm';
 import { ResultsGrid } from './components/ResultsGrid';
-import { DesignRequest, GeneratedDesign, GenerationStatus, GeneratedPhotorealistic, PhotorealisticStyle } from './types';
+import { DesignRequest, GeneratedDesign, GenerationStatus, GeneratedPhotorealistic, PhotorealisticStyle, PhotorealisticOptions } from './types';
 import { generateDarumaDesigns, refineDarumaDesign, generatePhotorealisticPhoto } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -65,11 +65,12 @@ const App: React.FC = () => {
   const handleGeneratePhotorealistic = async (
     designId: string,
     imageUrl: string,
-    style: PhotorealisticStyle
+    style: PhotorealisticStyle,
+    options?: PhotorealisticOptions
   ): Promise<void> => {
     setPhotorealisticGenerating({ designId, style });
     try {
-      const photo = await generatePhotorealisticPhoto(imageUrl, designId, style);
+      const photo = await generatePhotorealisticPhoto(imageUrl, designId, style, options);
       if (photo) {
         setPhotorealisticResults(prev => {
           const without = prev.filter(p => !(p.designId === designId && p.style === style));
