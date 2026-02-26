@@ -54,6 +54,10 @@ const generateSinglePattern = async (
       ? `Material & Surface: The doll must have a traditional Japanese lacquer (urushi) finish with a rich, glossy sheen. Show realistic light reflections and subtle specular highlights on the curved surface. The texture should look like hand-painted, high-quality lacquerware with depth and warmth in the gloss.`
       : `Material & Surface: The doll should have a matte, non-reflective finish. Smooth surface with subtle texture but no gloss or sheen.`;
 
+    const brandColorInstruction = request.brandColor
+      ? `Brand Color: The main body color of the daruma doll MUST be ${request.brandColor}. Use this as the dominant/primary color for the doll's body. Accent details and face can use complementary or traditional colors.`
+      : '';
+
     const mainPrompt = `
       Design a Japanese Daruma doll.
       Variation: Pattern ${index + 1}.
@@ -61,6 +65,7 @@ const generateSinglePattern = async (
       Specific Details: ${request.prompt}.
       ${sizeContext}
       ${glossyInstruction}
+      ${brandColorInstruction}
 
       Required Layout: Create a high-quality "Character Sheet" or "Product Design Sheet" containing EXACTLY 4 views of the SAME Daruma doll:
       1. Front View

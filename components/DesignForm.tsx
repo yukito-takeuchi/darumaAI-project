@@ -11,6 +11,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
   const [style, setStyle] = useState('');
   const [size, setSize] = useState<'5cm' | '11cm'>('5cm');
   const [glossy, setGlossy] = useState(true);
+  const [useBrandColor, setUseBrandColor] = useState(false);
+  const [brandColor, setBrandColor] = useState('#E60012');
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
 
   const isGenerating = status === GenerationStatus.GENERATING;
@@ -52,6 +54,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
       style,
       size,
       glossy,
+      brandColor: useBrandColor ? brandColor : undefined,
       referenceImages
     });
   };
@@ -122,6 +125,58 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
               <p className="text-[10px] text-stone-400">{glossy ? 'ON — 艶やかな漆塗り風の光沢' : 'OFF — マットな質感'}</p>
             </div>
           </label>
+        </div>
+
+        {/* Brand Color */}
+        <div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              role="switch"
+              aria-checked={useBrandColor}
+              onClick={() => setUseBrandColor(!useBrandColor)}
+              className={`
+                relative w-11 h-6 rounded-full transition-colors
+                ${useBrandColor ? 'bg-red-500' : 'bg-stone-300'}
+              `}
+            >
+              <div className={`
+                absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
+                ${useBrandColor ? 'translate-x-5' : 'translate-x-0'}
+              `} />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-stone-700">ブランドカラー指定</span>
+              <p className="text-[10px] text-stone-400">{useBrandColor ? 'ON — 指定色でボディを生成' : 'OFF — AI任せ'}</p>
+            </div>
+          </label>
+
+          {useBrandColor && (
+            <div className="mt-3 flex items-center gap-3 pl-14">
+              <input
+                type="color"
+                value={brandColor}
+                onChange={(e) => setBrandColor(e.target.value)}
+                disabled={isGenerating}
+                className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={brandColor.toUpperCase()}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setBrandColor(v);
+                }}
+                disabled={isGenerating}
+                maxLength={7}
+                className="w-24 bg-stone-50 border border-stone-300 text-stone-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 p-2 font-mono"
+                placeholder="#FF0000"
+              />
+              <div
+                className="w-8 h-8 rounded-full border border-stone-200 shadow-inner"
+                style={{ backgroundColor: brandColor }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Reference Images Upload (Multiple) */}

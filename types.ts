@@ -10,6 +10,7 @@ export interface DesignRequest {
   style: string;
   size: '5cm' | '11cm';
   glossy: boolean;
+  brandColor?: string;
   referenceImages: ReferenceImage[];
 }
 
