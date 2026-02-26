@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { DesignRequest, GeneratedDesign } from "../types";
+import { DesignRequest, GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle } from "../types";
 
 export const generateDarumaDesigns = async (
   request: DesignRequest
@@ -164,6 +164,76 @@ export const refineDarumaDesign = async (
     return null;
   } catch (error) {
     console.error("Refine failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * デザイン案からフォトリアルな商品写真を生成する。
+ * 用途: クライアントプレゼン・サンプル製造前のプレビュー。
+ */
+export const generatePhotorealisticPhoto = async (
+  designImageUrl: string,
+  designId: string,
+  style: PhotorealisticStyle
+): Promise<GeneratedPhotorealistic | null> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const base64Data = designImageUrl.split(',')[1];
+    const mimeMatch = designImageUrl.match(/^data:(.*);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+
+    const styleInstruction =
+      style === 'sample'
+        ? 'Create a photorealistic photo as if this is a sample/prototype daruma doll. Soft studio lighting, neutral or light gray background, slight imperfections acceptable. Suitable for internal preview or early client presentation.'
+        : 'Create a high-end product photography image of this daruma doll as if it were a finished product. Professional studio lighting, clean white or subtle gradient background, sharp focus, commercial quality. Suitable for catalogs and client presentations.';
+
+    const prompt = `
+This image is a design sheet (multiple views) of a Japanese Daruma doll. 
+Generate a SINGLE photorealistic photograph that shows this Daruma design as if it were a real, physical doll.
+
+${styleInstruction}
+
+Output: One photorealistic image only. The doll should look three-dimensional and real, with natural shadows and lighting. Preserve the design's colors, patterns, and character from the reference. No text or watermarks.
+    `.trim();
+
+    const parts = [
+      { inlineData: { data: base64Data, mimeType } },
+      { text: prompt },
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: { parts },
+      config: {
+        imageConfig: {
+          imageSize: '2K',
+          aspectRatio: '1:1',
+        },
+      },
+    });
+
+    const candidates = response.candidates;
+    if (!candidates || candidates.length === 0) return null;
+
+    const contentParts = candidates[0].content.parts;
+    for (const part of contentParts) {
+      if (part.inlineData) {
+        const base64Str = part.inlineData.data;
+        const outMime = part.inlineData.mimeType || 'image/png';
+        const imageUrl = `data:${outMime};base64,${base64Str}`;
+        return {
+          designId,
+          imageUrl,
+          style,
+          timestamp: Date.now(),
+        };
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Photorealistic generation failed:', error);
     throw error;
   }
 };

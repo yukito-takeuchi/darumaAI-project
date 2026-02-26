@@ -25,3 +25,13 @@ export enum GenerationStatus {
   COMPLETED = 'COMPLETED',
   ERROR = 'ERROR',
 }
+
+/** フォトリアル写真の種類: サンプル風 / 実物・商品写真風 */
+export type PhotorealisticStyle = 'sample' | 'product';
+
+export interface GeneratedPhotorealistic {
+  designId: string;
+  imageUrl: string;
+  style: PhotorealisticStyle;
+  timestamp: number;
+}

@@ -3,13 +3,15 @@ import { ApiKeyChecker } from './components/ApiKeyChecker';
 import { Hero } from './components/Hero';
 import { DesignForm } from './components/DesignForm';
 import { ResultsGrid } from './components/ResultsGrid';
-import { DesignRequest, GeneratedDesign, GenerationStatus } from './types';
-import { generateDarumaDesigns, refineDarumaDesign } from './services/geminiService';
+import { DesignRequest, GeneratedDesign, GenerationStatus, GeneratedPhotorealistic, PhotorealisticStyle } from './types';
+import { generateDarumaDesigns, refineDarumaDesign, generatePhotorealisticPhoto } from './services/geminiService';
 
 const App: React.FC = () => {
   const [isApiKeyReady, setIsApiKeyReady] = useState(false);
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [results, setResults] = useState<GeneratedDesign[]>([]);
+  const [photorealisticResults, setPhotorealisticResults] = useState<GeneratedPhotorealistic[]>([]);
+  const [photorealisticGenerating, setPhotorealisticGenerating] = useState<{ designId: string; style: PhotorealisticStyle } | null>(null);
 
   // Callback when API Key is selected/verified
   const handleApiKeyReady = () => {
@@ -18,7 +20,9 @@ const App: React.FC = () => {
 
   const handleGenerate = async (request: DesignRequest) => {
     setStatus(GenerationStatus.GENERATING);
-    setResults([]); // Clear previous
+    setResults([]);
+    setPhotorealisticResults([]);
+    setPhotorealisticGenerating(null);
 
     try {
       const generatedDesigns = await generateDarumaDesigns(request);
@@ -33,7 +37,6 @@ const App: React.FC = () => {
   };
 
   const handleRefine = async (id: string, instruction: string): Promise<void> => {
-    // Find the design to refine
     const designToRefine = results.find(r => r.id === id);
     if (!designToRefine) return;
 
@@ -51,10 +54,33 @@ const App: React.FC = () => {
           }
           return item;
         }));
+        setPhotorealisticResults(prev => prev.filter(p => p.designId !== id));
       }
     } catch (error) {
       console.error("Refinement failed", error);
-      throw error; // Let the component handle the error display
+      throw error;
+    }
+  };
+
+  const handleGeneratePhotorealistic = async (
+    designId: string,
+    imageUrl: string,
+    style: PhotorealisticStyle
+  ): Promise<void> => {
+    setPhotorealisticGenerating({ designId, style });
+    try {
+      const photo = await generatePhotorealisticPhoto(imageUrl, designId, style);
+      if (photo) {
+        setPhotorealisticResults(prev => {
+          const without = prev.filter(p => !(p.designId === designId && p.style === style));
+          return [...without, photo];
+        });
+      }
+    } catch (error) {
+      console.error("Photorealistic generation failed", error);
+      alert("フォトリアル写真の生成に失敗しました。再試行してください。");
+    } finally {
+      setPhotorealisticGenerating(null);
     }
   };
 
@@ -105,7 +131,13 @@ const App: React.FC = () => {
                    </div>
                 )}
 
-                <ResultsGrid results={results} onRefine={handleRefine} />
+                <ResultsGrid
+                  results={results}
+                  onRefine={handleRefine}
+                  photorealisticResults={photorealisticResults}
+                  photorealisticGenerating={photorealisticGenerating}
+                  onGeneratePhotorealistic={handleGeneratePhotorealistic}
+                />
 
               </div>
             </div>

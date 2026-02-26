@@ -1,13 +1,22 @@
 import React, { useState } from 'react';
-import { GeneratedDesign } from '../types';
+import { GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle } from '../types';
 import { jsPDF } from "jspdf";
 
 interface ResultsGridProps {
   results: GeneratedDesign[];
   onRefine?: (id: string, instruction: string) => Promise<void>;
+  photorealisticResults?: GeneratedPhotorealistic[];
+  photorealisticGenerating?: { designId: string; style: PhotorealisticStyle } | null;
+  onGeneratePhotorealistic?: (designId: string, imageUrl: string, style: PhotorealisticStyle) => Promise<void>;
 }
 
-export const ResultsGrid: React.FC<ResultsGridProps> = ({ results, onRefine }) => {
+export const ResultsGrid: React.FC<ResultsGridProps> = ({
+  results,
+  onRefine,
+  photorealisticResults = [],
+  photorealisticGenerating = null,
+  onGeneratePhotorealistic,
+}) => {
   // State to track which card is currently being edited
   const [editModeId, setEditModeId] = useState<string | null>(null);
   const [refinePrompt, setRefinePrompt] = useState<string>('');
@@ -187,6 +196,67 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({ results, onRefine }) =
                         >
                           {isRefining ? '修正中...' : '修正を適用'}
                         </button>
+                     </div>
+                   )}
+
+                   {/* フォトリアル写真生成 */}
+                   {onGeneratePhotorealistic && (
+                     <div className="mt-4 pt-4 border-t border-stone-100">
+                        <p className="text-xs font-bold text-stone-600 mb-2">フォトリアル写真</p>
+                        <p className="text-[10px] text-stone-400 mb-2">プレゼン・サンプルプレビュー用</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={isRefining || (photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'sample')}
+                            onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'sample')}
+                            className="py-2 px-2 bg-stone-100 text-stone-700 rounded-lg text-xs font-bold hover:bg-stone-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                          >
+                            {photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'sample' ? (
+                              <>
+                                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                生成中
+                              </>
+                            ) : (
+                              'サンプル風'
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isRefining || (photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'product')}
+                            onClick={() => onGeneratePhotorealistic(design.id, design.imageUrl, 'product')}
+                            className="py-2 px-2 bg-stone-800 text-white rounded-lg text-xs font-bold hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                          >
+                            {photorealisticGenerating?.designId === design.id && photorealisticGenerating?.style === 'product' ? (
+                              <>
+                                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                生成中
+                              </>
+                            ) : (
+                              '実物・商品写真風'
+                            )}
+                          </button>
+                        </div>
+                        {photorealisticResults.filter(p => p.designId === design.id).length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {photorealisticResults.filter(p => p.designId === design.id).map((photo) => (
+                              <div key={`${photo.designId}-${photo.style}-${photo.timestamp}`} className="rounded-lg overflow-hidden border border-stone-200 bg-stone-50">
+                                <div className="flex items-center justify-between px-2 py-1 border-b border-stone-200 bg-white">
+                                  <span className="text-[10px] font-medium text-stone-500">
+                                    {photo.style === 'sample' ? 'サンプル風' : '実物・商品写真風'}
+                                  </span>
+                                  <a
+                                    href={photo.imageUrl}
+                                    download={`daruma-photo-${photo.style}-${design.id}.png`}
+                                    className="text-[10px] font-bold text-red-600 hover:underline"
+                                  >
+                                    PNG保存
+                                  </a>
+                                </div>
+                                <img src={photo.imageUrl} alt="" className="w-full aspect-square object-cover" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                      </div>
                    )}
 
