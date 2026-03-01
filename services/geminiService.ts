@@ -38,8 +38,13 @@ const generateSinglePattern = async (
       });
 
       const refImageInstruction = request.brandColors && request.brandColors.length > 0
-        ? "Please analyze these reference images for SHAPE, MOTIFS, PATTERNS, and DESIGN COMPOSITION ONLY. DO NOT carry over any original colors from these images. The color palette is strictly defined by the Brand Colors specified below — ignore all original colors entirely and replace them with the specified brand colors."
-        : "Please analyze these reference images. They may contain logos, brand colors, character designs, or style references. Incorporate these visual elements harmoniously into the Daruma design.";
+        ? `Please analyze these reference images carefully.
+FACE & CHARACTER DESIGN: If the image contains a character, extract and DIRECTLY TRANSFER the character's facial features, facial expression, eye shape, eyebrow style, mouth design, and any distinctive face markings onto the Daruma doll's face. The Daruma face must reflect this character's identity — do NOT use a generic or traditional Daruma face.
+MOTIFS & PATTERNS: Extract shapes, motifs, and design compositions from the reference and apply them to the Daruma body decoration.
+COLOR: DO NOT carry over any original colors. The color palette is strictly defined by the Brand Colors specified below — replace all original colors entirely.`
+        : `Please analyze these reference images carefully.
+FACE & CHARACTER DESIGN: If the image contains a character, extract and DIRECTLY TRANSFER the character's facial features, facial expression, eye shape, eyebrow style, mouth design, and any distinctive face markings onto the Daruma doll's face. The Daruma face must reflect this character's identity — do NOT default to a generic or traditional Daruma face.
+MOTIFS, PATTERNS & COLORS: Incorporate all visual elements — colors, patterns, logos, style — harmoniously into the overall Daruma design.`;
 
       parts.push({ text: refImageInstruction });
     }
@@ -65,11 +70,16 @@ Do NOT use any color from the reference images. Reference images provide shape a
 The face area may use traditional white/black, but all body surfaces must use only the colors listed above.`
       : '';
 
+    const faceInstruction = request.referenceImages && request.referenceImages.length > 0
+      ? `Face Design: Base the Daruma's face on the character from the reference images. Faithfully reproduce the character's eyes, eyebrows, expression, and any unique facial features. Do NOT use a standard traditional Daruma face — the character's identity must be clearly recognizable.`
+      : `Face Design: Use a stylized Daruma face appropriate to the style direction.`;
+
     const mainPrompt = `
       Design a Japanese Daruma doll.
       Variation: Pattern ${index + 1}.
       Style Direction: ${request.style}.
       Specific Details: ${request.prompt}.
+      ${faceInstruction}
       ${sizeContext}
       ${glossyInstruction}
       ${brandColorInstruction}
