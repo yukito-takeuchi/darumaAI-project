@@ -36,10 +36,12 @@ const generateSinglePattern = async (
           },
         });
       });
-      
-      parts.push({
-        text: "Please analyze these reference images. They may contain logos, brand colors, character designs, or style references. Incorporate these visual elements harmoniously into the Daruma design."
-      });
+
+      const refImageInstruction = request.brandColors && request.brandColors.length > 0
+        ? "Please analyze these reference images for SHAPE, MOTIFS, PATTERNS, and DESIGN COMPOSITION ONLY. DO NOT carry over any original colors from these images. The color palette is strictly defined by the Brand Colors specified below — ignore all original colors entirely and replace them with the specified brand colors."
+        : "Please analyze these reference images. They may contain logos, brand colors, character designs, or style references. Incorporate these visual elements harmoniously into the Daruma design.";
+
+      parts.push({ text: refImageInstruction });
     }
 
     // Determine layout instructions based on size
@@ -56,9 +58,11 @@ const generateSinglePattern = async (
 
     const brandColorRoles = ['main body (dominant/primary color)', 'sub color (sash, decorative bands, secondary surfaces)', 'accent color (fine details, outlines, highlights)'];
     const brandColorInstruction = request.brandColors && request.brandColors.length > 0
-      ? `Brand Colors: The following colors MUST be used for the daruma doll's design:\n` +
-        request.brandColors.map((color, i) => `  - ${brandColorRoles[i]}: ${color}`).join('\n') +
-        `\nStrictly follow these color assignments. Face area can use traditional colors as needed.`
+      ? `BRAND COLOR OVERRIDE — HIGHEST PRIORITY:
+The following colors MUST be applied to the daruma doll. These completely override any colors seen in the reference images.
+${request.brandColors.map((color, i) => `  - ${brandColorRoles[i]}: ${color}`).join('\n')}
+Do NOT use any color from the reference images. Reference images provide shape and motif only.
+The face area may use traditional white/black, but all body surfaces must use only the colors listed above.`
       : '';
 
     const mainPrompt = `
