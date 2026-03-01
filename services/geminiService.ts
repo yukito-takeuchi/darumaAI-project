@@ -1,112 +1,184 @@
 import { GoogleGenAI } from "@google/genai";
-import { DesignRequest, GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle, PhotorealisticOptions } from "../types";
+import { DesignRequest, GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle, PhotorealisticOptions, ReferenceImage } from "../types";
 
+// ─────────────────────────────────────────────
+// Step 1: キャラクター特徴をテキストに変換
+// ─────────────────────────────────────────────
+const extractCharacterDescription = async (
+  ai: GoogleGenAI,
+  referenceImages: ReferenceImage[]
+): Promise<string> => {
+  const parts: any[] = [];
+
+  referenceImages.forEach(img => {
+    parts.push({ inlineData: { data: img.data, mimeType: img.mimeType } });
+  });
+
+  parts.push({
+    text: `You are a character design analyst. Analyze the character(s) in these reference images with extreme precision. This description will be used to faithfully recreate the character as a Daruma doll design.
+
+Output the following sections in detail:
+
+## FACE
+- Eye shape, exact color, pupil style, iris details, eyelash style
+- Eyebrow thickness, curve, color
+- Skin tone
+- Nose shape
+- Mouth/lip style and expression
+- Facial markings, tattoos, scars, or unique features
+- Face-mounted accessories (glasses, piercings, face horns, etc.)
+
+## HAIR
+- Color(s) including any gradients
+- Style, length, texture
+- Hair ornaments or accessories
+
+## BODY DECORATIONS
+- Clothing patterns, symbols, emblems, logos
+- Distinctive design elements on body/clothing
+- Recurring motifs or icons
+
+## APPENDAGES (will be rendered as painted surface decorations on the doll — NOT physical protrusions)
+- Horns: exact shape, size, color, placement
+- Tail: shape, length, color
+- Wings: shape, color
+- Animal ears: shape, color, placement
+- Any other non-human features
+
+## COLOR PALETTE
+List every distinct color with approximate hex codes.
+
+Be extremely detailed. Do not omit or simplify anything.`
+  });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: { parts },
+    });
+    const text = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text;
+    return text || '';
+  } catch (error) {
+    console.error('Step 1 — character description extraction failed:', error);
+    return '';
+  }
+};
+
+// ─────────────────────────────────────────────
+// Entry point
+// ─────────────────────────────────────────────
 export const generateDarumaDesigns = async (
   request: DesignRequest
 ): Promise<GeneratedDesign[]> => {
-  // Always initialize with the latest key from env
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
+
+  // Step 1: 参考画像があればキャラクター特徴を先にテキスト化
+  let characterDescription = '';
+  if (request.referenceImages && request.referenceImages.length > 0) {
+    characterDescription = await extractCharacterDescription(ai, request.referenceImages);
+  }
+
+  // Step 2: テキスト記述を使って6枚並列生成
   const patternCount = 6;
   const promises = [];
-
   for (let i = 0; i < patternCount; i++) {
-    promises.push(generateSinglePattern(ai, request, i));
+    promises.push(generateSinglePattern(ai, request, i, characterDescription));
   }
 
   const results = await Promise.all(promises);
   return results.filter((res): res is GeneratedDesign => res !== null);
 };
 
+// ─────────────────────────────────────────────
+// Step 2: だるまデザイン生成
+// ─────────────────────────────────────────────
 const generateSinglePattern = async (
-  ai: GoogleGenAI, 
-  request: DesignRequest, 
-  index: number
+  ai: GoogleGenAI,
+  request: DesignRequest,
+  index: number,
+  characterDescription: string = ''
 ): Promise<GeneratedDesign | null> => {
   try {
     const parts: any[] = [];
 
-    // Add All Reference Images (Multimodal prompt)
+    // 参考画像を追加（視覚的グラウンディング用）
     if (request.referenceImages && request.referenceImages.length > 0) {
       request.referenceImages.forEach(img => {
-        parts.push({
-          inlineData: {
-            data: img.data,
-            mimeType: img.mimeType,
-          },
-        });
+        parts.push({ inlineData: { data: img.data, mimeType: img.mimeType } });
       });
-
-      const refImageInstruction = request.brandColors && request.brandColors.length > 0
-        ? `Analyze these reference images with extreme attention to detail.
-CHARACTER FACE — MANDATORY FAITHFUL REPRODUCTION: If the image contains a character, you MUST reproduce every facial detail precisely onto the Daruma face: exact eye shape and size, pupil style, eyelash details, eyebrow thickness and curve, nose shape, mouth expression, any markings, scars, accessories (glasses, piercings, etc.), and hair framing the face. Do NOT simplify, omit, or replace any facial feature. The character must be immediately recognizable.
-BODY MOTIFS & PATTERNS: Extract all decorative elements, clothing patterns, symbols, and design details. Apply them faithfully to the Daruma body surfaces without omission.
-COLOR: DO NOT carry over any original colors. Colors are strictly defined by the Brand Colors below — replace all original colors entirely.`
-        : `Analyze these reference images with extreme attention to detail.
-CHARACTER FACE — MANDATORY FAITHFUL REPRODUCTION: If the image contains a character, you MUST reproduce every facial detail precisely onto the Daruma face: exact eye shape and size, pupil style, eyelash details, eyebrow thickness and curve, nose shape, mouth expression, any markings, scars, accessories (glasses, piercings, etc.), and hair framing the face. Do NOT simplify, omit, or replace any facial feature. The character must be immediately recognizable.
-BODY MOTIFS, PATTERNS & COLORS: Extract all decorative elements, clothing patterns, symbols, colors, and design details. Apply them all faithfully to the Daruma design without omission.`;
-
-      parts.push({ text: refImageInstruction });
     }
 
-    // Determine layout instructions based on size
-    // 5cm is typically simpler/cute, 11cm allows for more detail.
-    // However, the user request focuses on "Format". 
-    // We will ask for a standard multi-view sheet but specify the intended physical scale to influence detail level.
-    const sizeContext = request.size === '5cm' 
-      ? "Target Product Size: 5cm height (Small). Design should be bold, readable at small scale, slightly deformed or 'chibi' proportions if appropriate, but maintain traditional Daruma silhouette."
-      : "Target Product Size: 11cm height (Medium/Large). Design should include intricate details, fine patterns, and high-fidelity textures suitable for a larger surface area.";
+    const sizeContext = request.size === '5cm'
+      ? "Target Product Size: 5cm (Small). Bold, readable at small scale, maintain traditional Daruma silhouette."
+      : "Target Product Size: 11cm (Medium/Large). Intricate details and high-fidelity textures.";
 
     const glossyInstruction = request.glossy
-      ? `Material & Surface: The doll must have a traditional Japanese lacquer (urushi) finish with a rich, glossy sheen. Show realistic light reflections and subtle specular highlights on the curved surface. The texture should look like hand-painted, high-quality lacquerware with depth and warmth in the gloss.`
-      : `Material & Surface: The doll should have a matte, non-reflective finish. Smooth surface with subtle texture but no gloss or sheen.`;
+      ? `Material & Surface: Traditional Japanese lacquer (urushi) finish with rich glossy sheen. Realistic light reflections and specular highlights. Hand-painted lacquerware look.`
+      : `Material & Surface: Matte, non-reflective finish. Smooth surface with no gloss.`;
 
     const brandColorRoles = ['main body (dominant/primary color)', 'sub color (sash, decorative bands, secondary surfaces)', 'accent color (fine details, outlines, highlights)'];
     const brandColorInstruction = request.brandColors && request.brandColors.length > 0
-      ? `BRAND COLOR OVERRIDE — HIGHEST PRIORITY:
-The following colors MUST be applied to the daruma doll. These completely override any colors seen in the reference images.
+      ? `BRAND COLORS — BODY SURFACES ONLY:
 ${request.brandColors.map((color, i) => `  - ${brandColorRoles[i]}: ${color}`).join('\n')}
-Do NOT use any color from the reference images. Reference images provide shape and motif only.
-The face area may use traditional white/black, but all body surfaces must use only the colors listed above.`
+IMPORTANT: Apply brand colors to body surfaces only (main body, sash, back, sides, decorative bands).
+FACE EXCEPTION: The face area (eyes, skin, eyebrows, mouth, markings, hair) must use the character's original colors as described in the CHARACTER DESCRIPTION. Do NOT apply brand colors to the face.`
+      : '';
+
+    // Step 1 のテキスト記述をプロンプトに組み込む
+    const characterSection = characterDescription
+      ? `CHARACTER DESCRIPTION (extracted from reference images — use as primary reference):
+${characterDescription}
+
+The attached reference images are provided for visual confirmation. The description above takes priority for faithful reproduction.`
       : '';
 
     const faceInstruction = request.referenceImages && request.referenceImages.length > 0
-      ? `Face Design — CRITICAL: The Daruma's face MUST be a faithful, detailed reproduction of the character from the reference images. Reproduce every detail: eyes (shape, size, color, pupils, lashes), eyebrows, nose, mouth, facial markings, accessories. Do NOT default to a standard Daruma face. Do NOT simplify or omit details. Anyone familiar with the character must immediately recognize the face.`
+      ? `Face Design — CRITICAL:
+${characterDescription
+  ? `Reproduce the character's face exactly as described in the CHARACTER DESCRIPTION above. Every facial feature (eyes, eyebrows, skin tone, mouth, markings, accessories) must match precisely. The character must be immediately recognizable. Brand colors do NOT apply to the face.`
+  : `Base the Daruma face on the character from the reference images. Reproduce eyes, eyebrows, expression, and distinctive facial features faithfully. Do NOT default to a standard Daruma face.`}`
       : `Face Design: Use a stylized Daruma face appropriate to the style direction.`;
 
-    const mainPrompt = `
-      Design a Japanese Daruma doll.
-      Variation: Pattern ${index + 1}.
-      Style Direction: ${request.style}.
-      Specific Details: ${request.prompt}.
-      ${faceInstruction}
-      ${sizeContext}
-      ${glossyInstruction}
-      ${brandColorInstruction}
+    const silhouetteInstruction = `Silhouette — STRICT CONSTRAINT:
+The Daruma body MUST maintain its traditional smooth oval/egg shape. Physical protrusions are FORBIDDEN.
+Any character appendages (horns, tail, wings, animal ears) MUST be rendered as painted/illustrated decorations ON the surface — not physically extending beyond the oval outline.
+Final silhouette must be a clean, smooth Daruma oval from all 4 angles.`;
 
-      Required Layout: Create a high-quality "Character Sheet" or "Product Design Sheet" containing EXACTLY 4 views of the SAME Daruma doll:
-      1. Front View
-      2. Back View
-      3. Right Side View
-      4. Left Side View
+    const mainPrompt = `Design a Japanese Daruma doll.
+Variation: Pattern ${index + 1}.
+Style Direction: ${request.style}.
+Specific Details: ${request.prompt}.
 
-      Arrange them in a clean horizontal line or a 2x2 grid on a neutral background.
-      Ensure high consistency in the design across all 4 views.
-      The design should be production-ready, suitable for 3D modeling or printing.
-      High resolution, sharp details.
-    `;
-    
+${characterSection}
+
+${silhouetteInstruction}
+
+${faceInstruction}
+
+${sizeContext}
+${glossyInstruction}
+${brandColorInstruction}
+
+Required Layout: A high-quality "Character Sheet" with EXACTLY 4 views of the SAME Daruma doll:
+1. Front View
+2. Back View
+3. Right Side View
+4. Left Side View
+
+Arrange in a clean horizontal line or 2x2 grid on a neutral background.
+Ensure high consistency across all 4 views.
+Production-ready design suitable for 3D modeling or printing.
+High resolution, sharp details.`;
+
     parts.push({ text: mainPrompt });
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
-      contents: {
-        parts: parts,
-      },
+      contents: { parts },
       config: {
         imageConfig: {
-          imageSize: '2K', 
-          aspectRatio: '16:9', 
+          imageSize: '2K',
+          aspectRatio: '16:9',
         },
       },
     });
@@ -116,7 +188,6 @@ The face area may use traditional white/black, but all body surfaces must use on
 
     const contentParts = candidates[0].content.parts;
     let imageUrl = '';
-
     for (const part of contentParts) {
       if (part.inlineData) {
         const base64Str = part.inlineData.data;
@@ -153,27 +224,15 @@ export const refineDarumaDesign = async (
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
 
     const parts = [
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType: mimeType,
-        },
-      },
-      {
-        text: `Edit this design based on the following instruction. Maintain the 4-view character sheet layout (Front, Back, Right Side, Left Side) and high quality style. Instruction: ${instruction}`
-      }
+      { inlineData: { data: base64Data, mimeType } },
+      { text: `Edit this design based on the following instruction. Maintain the 4-view character sheet layout (Front, Back, Right Side, Left Side) and high quality style. Instruction: ${instruction}` }
     ];
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',
-      contents: {
-        parts: parts,
-      },
+      contents: { parts },
       config: {
-        imageConfig: {
-          imageSize: '2K', 
-          aspectRatio: '16:9', 
-        },
+        imageConfig: { imageSize: '2K', aspectRatio: '16:9' },
       },
     });
 
@@ -241,10 +300,7 @@ Output: One photorealistic image only. The doll should look three-dimensional an
       model: 'gemini-3-pro-image-preview',
       contents: { parts },
       config: {
-        imageConfig: {
-          imageSize: '2K',
-          aspectRatio: '1:1',
-        },
+        imageConfig: { imageSize: '2K', aspectRatio: '1:1' },
       },
     });
 
@@ -257,12 +313,7 @@ Output: One photorealistic image only. The doll should look three-dimensional an
         const base64Str = part.inlineData.data;
         const outMime = part.inlineData.mimeType || 'image/png';
         const imageUrl = `data:${outMime};base64,${base64Str}`;
-        return {
-          designId,
-          imageUrl,
-          style,
-          timestamp: Date.now(),
-        };
+        return { designId, imageUrl, style, timestamp: Date.now() };
       }
     }
     return null;
