@@ -7,7 +7,7 @@ export const generateDarumaDesigns = async (
   // Always initialize with the latest key from env
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const patternCount = 3;
+  const patternCount = 6;
   const promises = [];
 
   for (let i = 0; i < patternCount; i++) {
@@ -38,13 +38,13 @@ const generateSinglePattern = async (
       });
 
       const refImageInstruction = request.brandColors && request.brandColors.length > 0
-        ? `Please analyze these reference images carefully.
-FACE & CHARACTER DESIGN: If the image contains a character, extract and DIRECTLY TRANSFER the character's facial features, facial expression, eye shape, eyebrow style, mouth design, and any distinctive face markings onto the Daruma doll's face. The Daruma face must reflect this character's identity — do NOT use a generic or traditional Daruma face.
-MOTIFS & PATTERNS: Extract shapes, motifs, and design compositions from the reference and apply them to the Daruma body decoration.
-COLOR: DO NOT carry over any original colors. The color palette is strictly defined by the Brand Colors specified below — replace all original colors entirely.`
-        : `Please analyze these reference images carefully.
-FACE & CHARACTER DESIGN: If the image contains a character, extract and DIRECTLY TRANSFER the character's facial features, facial expression, eye shape, eyebrow style, mouth design, and any distinctive face markings onto the Daruma doll's face. The Daruma face must reflect this character's identity — do NOT default to a generic or traditional Daruma face.
-MOTIFS, PATTERNS & COLORS: Incorporate all visual elements — colors, patterns, logos, style — harmoniously into the overall Daruma design.`;
+        ? `Analyze these reference images with extreme attention to detail.
+CHARACTER FACE — MANDATORY FAITHFUL REPRODUCTION: If the image contains a character, you MUST reproduce every facial detail precisely onto the Daruma face: exact eye shape and size, pupil style, eyelash details, eyebrow thickness and curve, nose shape, mouth expression, any markings, scars, accessories (glasses, piercings, etc.), and hair framing the face. Do NOT simplify, omit, or replace any facial feature. The character must be immediately recognizable.
+BODY MOTIFS & PATTERNS: Extract all decorative elements, clothing patterns, symbols, and design details. Apply them faithfully to the Daruma body surfaces without omission.
+COLOR: DO NOT carry over any original colors. Colors are strictly defined by the Brand Colors below — replace all original colors entirely.`
+        : `Analyze these reference images with extreme attention to detail.
+CHARACTER FACE — MANDATORY FAITHFUL REPRODUCTION: If the image contains a character, you MUST reproduce every facial detail precisely onto the Daruma face: exact eye shape and size, pupil style, eyelash details, eyebrow thickness and curve, nose shape, mouth expression, any markings, scars, accessories (glasses, piercings, etc.), and hair framing the face. Do NOT simplify, omit, or replace any facial feature. The character must be immediately recognizable.
+BODY MOTIFS, PATTERNS & COLORS: Extract all decorative elements, clothing patterns, symbols, colors, and design details. Apply them all faithfully to the Daruma design without omission.`;
 
       parts.push({ text: refImageInstruction });
     }
@@ -71,7 +71,7 @@ The face area may use traditional white/black, but all body surfaces must use on
       : '';
 
     const faceInstruction = request.referenceImages && request.referenceImages.length > 0
-      ? `Face Design: Base the Daruma's face on the character from the reference images. Faithfully reproduce the character's eyes, eyebrows, expression, and any unique facial features. Do NOT use a standard traditional Daruma face — the character's identity must be clearly recognizable.`
+      ? `Face Design — CRITICAL: The Daruma's face MUST be a faithful, detailed reproduction of the character from the reference images. Reproduce every detail: eyes (shape, size, color, pupils, lashes), eyebrows, nose, mouth, facial markings, accessories. Do NOT default to a standard Daruma face. Do NOT simplify or omit details. Anyone familiar with the character must immediately recognize the face.`
       : `Face Design: Use a stylized Daruma face appropriate to the style direction.`;
 
     const mainPrompt = `
