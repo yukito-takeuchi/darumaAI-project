@@ -118,18 +118,31 @@ const generateSinglePattern = async (
 
     const brandColorRoles = ['main body (dominant/primary color)', 'sub color (sash, decorative bands, secondary surfaces)', 'accent color (fine details, outlines, highlights)'];
     const brandColorInstruction = request.brandColors && request.brandColors.length > 0
-      ? `BRAND COLORS — BODY SURFACES ONLY:
+      ? `══════════════════════════════════════
+FINAL COLOR OVERRIDE — HIGHEST PRIORITY
+This instruction overrides ALL color information above, including the CHARACTER DESCRIPTION color palette.
+══════════════════════════════════════
+BODY SURFACES (main body, sash, back, sides, decorative bands):
 ${request.brandColors.map((color, i) => `  - ${brandColorRoles[i]}: ${color}`).join('\n')}
-IMPORTANT: Apply brand colors to body surfaces only (main body, sash, back, sides, decorative bands).
-FACE EXCEPTION: The face area (eyes, skin, eyebrows, mouth, markings, hair) must use the character's original colors as described in the CHARACTER DESCRIPTION. Do NOT apply brand colors to the face.`
+You MUST use ONLY these colors on all body surfaces. Any original character body colors are REPLACED entirely.
+
+FACE AREA EXCEPTION (eyes, skin tone, eyebrows, mouth, markings, hair):
+Preserve the character's original face colors for recognition. Brand colors do NOT apply here.
+══════════════════════════════════════`
       : '';
 
     // Step 1 のテキスト記述をプロンプトに組み込む
     const characterSection = characterDescription
-      ? `CHARACTER DESCRIPTION (extracted from reference images — use as primary reference):
+      ? request.brandColors && request.brandColors.length > 0
+        ? `CHARACTER DESCRIPTION (extracted from reference images — use for FACE, MOTIFS, and PATTERNS only):
 ${characterDescription}
 
-The attached reference images are provided for visual confirmation. The description above takes priority for faithful reproduction.`
+IMPORTANT: Use this description for face details, motifs, patterns, and design elements ONLY.
+The "COLOR PALETTE" section of this description is COMPLETELY OVERRIDDEN by the Brand Colors defined at the end of this prompt. Do NOT use any color from this description for body surfaces.`
+        : `CHARACTER DESCRIPTION (extracted from reference images — use as primary reference):
+${characterDescription}
+
+The attached reference images are provided for visual confirmation. Reproduce all features including colors faithfully.`
       : '';
 
     const faceInstruction = request.referenceImages && request.referenceImages.length > 0
@@ -157,7 +170,6 @@ ${faceInstruction}
 
 ${sizeContext}
 ${glossyInstruction}
-${brandColorInstruction}
 
 Required Layout: A high-quality "Character Sheet" with EXACTLY 4 views of the SAME Daruma doll:
 1. Front View
@@ -168,7 +180,9 @@ Required Layout: A high-quality "Character Sheet" with EXACTLY 4 views of the SA
 Arrange in a clean horizontal line or 2x2 grid on a neutral background.
 Ensure high consistency across all 4 views.
 Production-ready design suitable for 3D modeling or printing.
-High resolution, sharp details.`;
+High resolution, sharp details.
+
+${brandColorInstruction}`;
 
     parts.push({ text: mainPrompt });
 
