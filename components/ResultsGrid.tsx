@@ -4,7 +4,7 @@ import { jsPDF } from "jspdf";
 
 interface ResultsGridProps {
   results: GeneratedDesign[];
-  onRefine?: (id: string, instruction: string) => Promise<void>;
+  onRefine?: (id: string, instruction: string, annotationImage?: { data: string; mimeType: string }) => Promise<void>;
   photorealisticResults?: GeneratedPhotorealistic[];
   photorealisticGenerating?: Array<{ designId: string; style: PhotorealisticStyle }>;
   onGeneratePhotorealistic?: (designId: string, imageUrl: string, style: PhotorealisticStyle, options?: PhotorealisticOptions) => Promise<void>;
@@ -22,6 +22,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [refinePrompt, setRefinePrompt] = useState<string>('');
   const [refiningIds, setRefiningIds] = useState<Set<string>>(new Set());
   const [keychainEnabled, setKeychainEnabled] = useState<Record<string, boolean>>({});
+  const [annotationImage, setAnnotationImage] = useState<{ data: string; mimeType: string } | null>(null);
 
   if (results.length === 0) return null;
 
@@ -58,10 +59,10 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
 
     setRefiningIds(prev => new Set(prev).add(id));
     try {
-      await onRefine(id, refinePrompt);
-      // Close edit mode and clear prompt on success
+      await onRefine(id, refinePrompt, annotationImage ?? undefined);
       setEditModeId(null);
       setRefinePrompt('');
+      setAnnotationImage(null);
     } catch (e) {
       alert("修正に失敗しました。");
     } finally {
@@ -73,12 +74,29 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
   };
 
+  const handleAnnotationImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setAnnotationImage({
+        data: base64String.split(',')[1],
+        mimeType: file.type,
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const toggleEditMode = (id: string) => {
     if (editModeId === id) {
       setEditModeId(null);
+      setAnnotationImage(null);
     } else {
       setEditModeId(id);
       setRefinePrompt('');
+      setAnnotationImage(null);
     }
   };
 
@@ -185,11 +203,53 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                         <textarea
                           value={refinePrompt}
                           onChange={(e) => setRefinePrompt(e.target.value)}
-                          placeholder="例: 背景を青に変更、目の色を金にして"
+                          placeholder="例: 右下の模様を削除して、目の色を金にして"
                           className="w-full text-sm p-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none resize-none bg-stone-50"
                           rows={2}
                           disabled={isRefining}
                         />
+
+                        {/* Annotation Image */}
+                        <div className="mt-2">
+                          {annotationImage ? (
+                            <div className="flex items-center gap-2 p-2 bg-stone-50 border border-stone-200 rounded-lg">
+                              <img
+                                src={`data:${annotationImage.mimeType};base64,${annotationImage.data}`}
+                                alt="参考画像"
+                                className="w-12 h-12 object-cover rounded border border-stone-200 flex-shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-stone-600">参考画像（修正箇所の指摘）</p>
+                                <p className="text-[10px] text-stone-400">AIがこの画像を参照して修正します</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setAnnotationImage(null)}
+                                disabled={isRefining}
+                                className="p-1 hover:bg-stone-200 rounded-full text-stone-400 hover:text-red-500 transition-colors flex-shrink-0"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <label className={`flex items-center gap-2 px-3 py-2 border border-dashed border-stone-300 rounded-lg cursor-pointer hover:border-red-400 hover:bg-red-50 transition-colors ${isRefining ? 'opacity-50 pointer-events-none' : ''}`}>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAnnotationImageChange}
+                                disabled={isRefining}
+                              />
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-stone-400">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                              </svg>
+                              <span className="text-xs text-stone-500">修正箇所の参考画像を添付（任意）</span>
+                            </label>
+                          )}
+                        </div>
+
                         <button
                           onClick={() => handleRefineSubmit(design.id)}
                           disabled={!refinePrompt.trim() || isRefining}

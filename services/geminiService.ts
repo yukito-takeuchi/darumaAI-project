@@ -228,7 +228,8 @@ ${brandColorInstruction}`;
 
 export const refineDarumaDesign = async (
   currentImageUrl: string,
-  instruction: string
+  instruction: string,
+  annotationImage?: { data: string; mimeType: string }
 ): Promise<string | null> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -237,10 +238,23 @@ export const refineDarumaDesign = async (
     const mimeMatch = currentImageUrl.match(/^data:(.*);base64,/);
     const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
 
-    const parts = [
+    const parts: any[] = [
       { inlineData: { data: base64Data, mimeType } },
-      { text: `Edit this design based on the following instruction. Maintain the 4-view character sheet layout (Front, Back, Right Side, Left Side) and high quality style. Instruction: ${instruction}` }
     ];
+
+    if (annotationImage) {
+      parts.push({ inlineData: { data: annotationImage.data, mimeType: annotationImage.mimeType } });
+      parts.push({
+        text: `The first image is the current Daruma design sheet. The second image is an annotation provided by the user to indicate the specific area or element to modify.
+Refer to the second image to identify exactly what needs to be changed, then apply the following instruction to the design.
+Maintain the 4-view character sheet layout (Front, Back, Right Side, Left Side) and overall quality.
+Instruction: ${instruction}`
+      });
+    } else {
+      parts.push({
+        text: `Edit this design based on the following instruction. Maintain the 4-view character sheet layout (Front, Back, Right Side, Left Side) and high quality style. Instruction: ${instruction}`
+      });
+    }
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-image-preview',

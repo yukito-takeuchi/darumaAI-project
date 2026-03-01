@@ -36,12 +36,12 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRefine = async (id: string, instruction: string): Promise<void> => {
+  const handleRefine = async (id: string, instruction: string, annotationImage?: { data: string; mimeType: string }): Promise<void> => {
     const designToRefine = results.find(r => r.id === id);
     if (!designToRefine) return;
 
     try {
-      const newImageUrl = await refineDarumaDesign(designToRefine.imageUrl, instruction);
+      const newImageUrl = await refineDarumaDesign(designToRefine.imageUrl, instruction, annotationImage);
       
       if (newImageUrl) {
         setResults(prev => prev.map(item => {
