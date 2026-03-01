@@ -54,8 +54,11 @@ const generateSinglePattern = async (
       ? `Material & Surface: The doll must have a traditional Japanese lacquer (urushi) finish with a rich, glossy sheen. Show realistic light reflections and subtle specular highlights on the curved surface. The texture should look like hand-painted, high-quality lacquerware with depth and warmth in the gloss.`
       : `Material & Surface: The doll should have a matte, non-reflective finish. Smooth surface with subtle texture but no gloss or sheen.`;
 
-    const brandColorInstruction = request.brandColor
-      ? `Brand Color: The main body color of the daruma doll MUST be ${request.brandColor}. Use this as the dominant/primary color for the doll's body. Accent details and face can use complementary or traditional colors.`
+    const brandColorRoles = ['main body (dominant/primary color)', 'sub color (sash, decorative bands, secondary surfaces)', 'accent color (fine details, outlines, highlights)'];
+    const brandColorInstruction = request.brandColors && request.brandColors.length > 0
+      ? `Brand Colors: The following colors MUST be used for the daruma doll's design:\n` +
+        request.brandColors.map((color, i) => `  - ${brandColorRoles[i]}: ${color}`).join('\n') +
+        `\nStrictly follow these color assignments. Face area can use traditional colors as needed.`
       : '';
 
     const mainPrompt = `

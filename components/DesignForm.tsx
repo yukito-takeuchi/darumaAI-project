@@ -11,8 +11,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
   const [style, setStyle] = useState('');
   const [size, setSize] = useState<'5cm' | '11cm'>('5cm');
   const [glossy, setGlossy] = useState(true);
-  const [useBrandColor, setUseBrandColor] = useState(false);
-  const [brandColor, setBrandColor] = useState('#E60012');
+  const [brandColorEnabled, setBrandColorEnabled] = useState<[boolean, boolean, boolean]>([false, false, false]);
+  const [brandColors, setBrandColors] = useState<[string, string, string]>(['#E60012', '#FFFFFF', '#000000']);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
 
   const isGenerating = status === GenerationStatus.GENERATING;
@@ -54,7 +54,9 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
       style,
       size,
       glossy,
-      brandColor: useBrandColor ? brandColor : undefined,
+      brandColors: brandColorEnabled.some(e => e)
+        ? brandColors.filter((_, i) => brandColorEnabled[i])
+        : undefined,
       referenceImages
     });
   };
@@ -127,56 +129,75 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
           </label>
         </div>
 
-        {/* Brand Color */}
+        {/* Brand Colors */}
         <div>
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div
-              role="switch"
-              aria-checked={useBrandColor}
-              onClick={() => setUseBrandColor(!useBrandColor)}
-              className={`
-                relative w-11 h-6 rounded-full transition-colors
-                ${useBrandColor ? 'bg-red-500' : 'bg-stone-300'}
-              `}
-            >
-              <div className={`
-                absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
-                ${useBrandColor ? 'translate-x-5' : 'translate-x-0'}
-              `} />
-            </div>
-            <div>
-              <span className="text-sm font-bold text-stone-700">ブランドカラー指定</span>
-              <p className="text-[10px] text-stone-400">{useBrandColor ? 'ON — 指定色でボディを生成' : 'OFF — AI任せ'}</p>
-            </div>
-          </label>
+          <p className="text-sm font-bold text-stone-700 mb-3">ブランドカラー指定（最大3色）</p>
+          <div className="space-y-3">
+            {(['メイン', 'サブ', 'アクセント'] as const).map((label, i) => (
+              <div key={i}>
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <div
+                    role="switch"
+                    aria-checked={brandColorEnabled[i]}
+                    onClick={() => {
+                      const next: [boolean, boolean, boolean] = [...brandColorEnabled] as [boolean, boolean, boolean];
+                      next[i] = !next[i];
+                      setBrandColorEnabled(next);
+                    }}
+                    className={`
+                      relative w-11 h-6 rounded-full transition-colors flex-shrink-0
+                      ${brandColorEnabled[i] ? 'bg-red-500' : 'bg-stone-300'}
+                    `}
+                  >
+                    <div className={`
+                      absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform
+                      ${brandColorEnabled[i] ? 'translate-x-5' : 'translate-x-0'}
+                    `} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-stone-700">カラー{i + 1}（{label}）</span>
+                    <p className="text-[10px] text-stone-400">{brandColorEnabled[i] ? 'ON — 指定色を使用' : 'OFF — AI任せ'}</p>
+                  </div>
+                </label>
 
-          {useBrandColor && (
-            <div className="mt-3 flex items-center gap-3 pl-14">
-              <input
-                type="color"
-                value={brandColor}
-                onChange={(e) => setBrandColor(e.target.value)}
-                disabled={isGenerating}
-                className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer p-0.5"
-              />
-              <input
-                type="text"
-                value={brandColor.toUpperCase()}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setBrandColor(v);
-                }}
-                disabled={isGenerating}
-                maxLength={7}
-                className="w-24 bg-stone-50 border border-stone-300 text-stone-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 p-2 font-mono"
-                placeholder="#FF0000"
-              />
-              <div
-                className="w-8 h-8 rounded-full border border-stone-200 shadow-inner"
-                style={{ backgroundColor: brandColor }}
-              />
-            </div>
-          )}
+                {brandColorEnabled[i] && (
+                  <div className="mt-2 flex items-center gap-3 pl-14">
+                    <input
+                      type="color"
+                      value={brandColors[i]}
+                      onChange={(e) => {
+                        const next: [string, string, string] = [...brandColors] as [string, string, string];
+                        next[i] = e.target.value;
+                        setBrandColors(next);
+                      }}
+                      disabled={isGenerating}
+                      className="w-10 h-10 rounded-lg border border-stone-300 cursor-pointer p-0.5"
+                    />
+                    <input
+                      type="text"
+                      value={brandColors[i].toUpperCase()}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) {
+                          const next: [string, string, string] = [...brandColors] as [string, string, string];
+                          next[i] = v;
+                          setBrandColors(next);
+                        }
+                      }}
+                      disabled={isGenerating}
+                      maxLength={7}
+                      className="w-24 bg-stone-50 border border-stone-300 text-stone-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 p-2 font-mono"
+                      placeholder="#FF0000"
+                    />
+                    <div
+                      className="w-8 h-8 rounded-full border border-stone-200 shadow-inner flex-shrink-0"
+                      style={{ backgroundColor: brandColors[i] }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Reference Images Upload (Multiple) */}
