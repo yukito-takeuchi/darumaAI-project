@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, DragEvent } from 'react';
 import { DesignRequest, GenerationStatus, ReferenceImage } from '../types';
 
 interface DesignFormProps {
@@ -14,33 +14,50 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
   const [brandColorEnabled, setBrandColorEnabled] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [brandColors, setBrandColors] = useState<[string, string, string]>(['#E60012', '#FFFFFF', '#000000']);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   const isGenerating = status === GenerationStatus.GENERATING;
 
+  const processFiles = (files: FileList | File[]) => {
+    Array.from(files).forEach((file: File) => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setReferenceImages(prev => [
+          ...prev,
+          {
+            id: Math.random().toString(36).substring(7),
+            name: file.name,
+            mimeType: file.type,
+            data: base64String.split(',')[1],
+          }
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      Array.from(files).forEach((file: File) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          const base64Content = base64String.split(',')[1];
-          
-          setReferenceImages(prev => [
-            ...prev,
-            {
-              id: Math.random().toString(36).substring(7),
-              name: file.name,
-              mimeType: file.type,
-              data: base64Content
-            }
-          ]);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-    // Reset input value to allow selecting the same file again if needed
+    if (e.target.files && e.target.files.length > 0) processFiles(e.target.files);
     e.target.value = '';
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!isGenerating) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isGenerating) return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) processFiles(e.dataTransfer.files);
   };
 
   const removeImage = (id: string) => {
@@ -234,31 +251,42 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
              )}
 
             {/* Upload Button */}
-            <label className="block">
-              <input 
-                type="file" 
-                className="hidden" 
-                accept="image/*" 
-                multiple
-                onChange={handleFileChange}
-                disabled={isGenerating}
-              />
-              <div className={`
+            <div
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`
                 border-2 border-dashed rounded-xl p-6 text-center transition-all
-                ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:border-red-400 hover:bg-red-50 cursor-pointer'}
-                border-stone-300 bg-stone-50
-              `}>
-                <div className="text-stone-500">
+                ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                ${isDragging ? 'border-red-500 bg-red-50 scale-[1.01]' : 'border-stone-300 bg-stone-50 hover:border-red-400 hover:bg-red-50'}
+              `}
+            >
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={isGenerating}
+                />
+                <div className="text-stone-500 pointer-events-none">
                   <div className="flex justify-center mb-2 text-stone-400">
-                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                     </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
                   </div>
-                  <p className="font-medium">クリックして素材を追加</p>
-                  <p className="text-xs mt-1 text-stone-400">ロゴ、キャラ、配色見本など複数選択可</p>
+                  {isDragging
+                    ? <p className="font-medium text-red-600">ここにドロップ</p>
+                    : <>
+                        <p className="font-medium">クリックまたはドラッグ&amp;ドロップで素材を追加</p>
+                        <p className="text-xs mt-1 text-stone-400">ロゴ、キャラ、配色見本など複数可</p>
+                      </>
+                  }
                 </div>
-              </div>
-            </label>
+              </label>
+            </div>
           </div>
         </div>
 

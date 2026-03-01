@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, DragEvent } from 'react';
 import { GeneratedDesign, GeneratedPhotorealistic, PhotorealisticStyle, PhotorealisticOptions } from '../types';
 import { jsPDF } from "jspdf";
 
@@ -23,6 +23,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [refiningIds, setRefiningIds] = useState<Set<string>>(new Set());
   const [keychainEnabled, setKeychainEnabled] = useState<Record<string, boolean>>({});
   const [annotationImage, setAnnotationImage] = useState<{ data: string; mimeType: string } | null>(null);
+  const [isAnnotationDragging, setIsAnnotationDragging] = useState(false);
 
   if (results.length === 0) return null;
 
@@ -74,19 +75,38 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
   };
 
-  const handleAnnotationImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processAnnotationFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
-      setAnnotationImage({
-        data: base64String.split(',')[1],
-        mimeType: file.type,
-      });
+      setAnnotationImage({ data: base64String.split(',')[1], mimeType: file.type });
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAnnotationImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processAnnotationFile(file);
     e.target.value = '';
+  };
+
+  const handleAnnotationDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsAnnotationDragging(true);
+  };
+
+  const handleAnnotationDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsAnnotationDragging(false);
+  };
+
+  const handleAnnotationDrop = (e: DragEvent<HTMLDivElement>, isRefining: boolean) => {
+    e.preventDefault();
+    setIsAnnotationDragging(false);
+    if (isRefining) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) processAnnotationFile(file);
   };
 
   const toggleEditMode = (id: string) => {
@@ -234,19 +254,29 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                               </button>
                             </div>
                           ) : (
-                            <label className={`flex items-center gap-2 px-3 py-2 border border-dashed border-stone-300 rounded-lg cursor-pointer hover:border-red-400 hover:bg-red-50 transition-colors ${isRefining ? 'opacity-50 pointer-events-none' : ''}`}>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleAnnotationImageChange}
-                                disabled={isRefining}
-                              />
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-stone-400">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                              </svg>
-                              <span className="text-xs text-stone-500">修正箇所の参考画像を添付（任意）</span>
-                            </label>
+                            <div
+                              onDragOver={handleAnnotationDragOver}
+                              onDragEnter={handleAnnotationDragOver}
+                              onDragLeave={handleAnnotationDragLeave}
+                              onDrop={(e) => handleAnnotationDrop(e, isRefining)}
+                              className={`border border-dashed rounded-lg transition-all ${isRefining ? 'opacity-50 pointer-events-none' : ''} ${isAnnotationDragging ? 'border-red-500 bg-red-50' : 'border-stone-300 hover:border-red-400 hover:bg-red-50'}`}
+                            >
+                              <label className="flex items-center gap-2 px-3 py-2 cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={handleAnnotationImageChange}
+                                  disabled={isRefining}
+                                />
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-stone-400 flex-shrink-0 pointer-events-none">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                                </svg>
+                                <span className="text-xs text-stone-500 pointer-events-none">
+                                  {isAnnotationDragging ? 'ここにドロップ' : 'クリックまたはドラッグ&ドロップで添付（任意）'}
+                                </span>
+                              </label>
+                            </div>
                           )}
                         </div>
 
