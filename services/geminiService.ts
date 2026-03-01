@@ -78,8 +78,8 @@ export const generateDarumaDesigns = async (
     characterDescription = await extractCharacterDescription(ai, request.referenceImages);
   }
 
-  // Step 2: テキスト記述を使って6枚並列生成
-  const patternCount = 6;
+  // Step 2: テキスト記述を使って3枚並列生成
+  const patternCount = 3;
   const promises = [];
   for (let i = 0; i < patternCount; i++) {
     promises.push(generateSinglePattern(ai, request, i, characterDescription));
@@ -187,7 +187,7 @@ ${brandColorInstruction}`;
     parts.push({ text: mainPrompt });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-2.0-flash-preview-image-generation',
       contents: { parts },
       config: {
         imageConfig: {
@@ -257,7 +257,7 @@ Instruction: ${instruction}`
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-2.0-flash-preview-image-generation',
       contents: { parts },
       config: {
         imageConfig: { imageSize: '2K', aspectRatio: '16:9' },
@@ -325,7 +325,7 @@ Output: One photorealistic image only. The doll should look three-dimensional an
     ];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-2.0-flash-preview-image-generation',
       contents: { parts },
       config: {
         imageConfig: { imageSize: '2K', aspectRatio: '1:1' },
