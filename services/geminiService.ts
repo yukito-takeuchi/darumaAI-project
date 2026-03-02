@@ -113,6 +113,62 @@ export const generateDarumaDesigns = async (
 };
 
 // ─────────────────────────────────────────────
+// フォーマットラベルを画像の左上に追加
+// ─────────────────────────────────────────────
+const addFormatLabel = (imageDataUrl: string, size: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(imageDataUrl); return; }
+
+      ctx.drawImage(img, 0, 0);
+
+      const label = `${size} 達磨`;
+      const fontSize = Math.max(28, Math.round(img.width * 0.022));
+      const padding = Math.round(fontSize * 0.55);
+      const x = Math.round(img.width * 0.025);
+      const y = Math.round(img.height * 0.03);
+
+      ctx.font = `bold ${fontSize}px 'Helvetica Neue', Arial, sans-serif`;
+      const textW = ctx.measureText(label).width;
+      const boxW = textW + padding * 2;
+      const boxH = fontSize + padding * 2;
+      const radius = 6;
+
+      // 白背景ボックス
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#222222';
+      ctx.lineWidth = Math.max(2, Math.round(img.width * 0.0015));
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + boxW - radius, y);
+      ctx.arcTo(x + boxW, y, x + boxW, y + radius, radius);
+      ctx.lineTo(x + boxW, y + boxH - radius);
+      ctx.arcTo(x + boxW, y + boxH, x + boxW - radius, y + boxH, radius);
+      ctx.lineTo(x + radius, y + boxH);
+      ctx.arcTo(x, y + boxH, x, y + boxH - radius, radius);
+      ctx.lineTo(x, y + radius);
+      ctx.arcTo(x, y, x + radius, y, radius);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // テキスト
+      ctx.fillStyle = '#111111';
+      ctx.fillText(label, x + padding, y + padding + fontSize * 0.82);
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(imageDataUrl);
+    img.src = imageDataUrl;
+  });
+};
+
+// ─────────────────────────────────────────────
 // Step 2: だるまデザイン生成
 // ─────────────────────────────────────────────
 const generateSinglePattern = async (
@@ -203,16 +259,12 @@ ${faceInstruction}
 ${sizeContext}
 ${glossyInstruction}
 
-Required Layout: A high-quality "Character Sheet" with EXACTLY 4 views of the SAME Daruma doll:
-1. Front View
-2. Back View
-3. Right Side View
-4. Left Side View
-
-Arrange in a clean horizontal line or 2x2 grid on a neutral background.
-Ensure high consistency across all 4 views.
-Production-ready design suitable for 3D modeling or printing.
-High resolution, sharp details.
+Required Layout — STRICT:
+Arrange EXACTLY 4 views of the SAME Daruma doll in a SINGLE HORIZONTAL ROW, evenly spaced, on a clean white background.
+Left to right order:  [1. Front]  [2. Back]  [3. Right Side]  [4. Left Side]
+All 4 dolls must be the same size and vertical alignment. Equal gaps between each view.
+No 2×2 grid. No stacking. Horizontal line only.
+Production-ready, high resolution, sharp details.
 
 ${brandColorInstruction}`;
 
@@ -245,9 +297,12 @@ ${brandColorInstruction}`;
 
     if (!imageUrl) return null;
 
+    // フォーマットラベルを左上に追加
+    const labeledImageUrl = await addFormatLabel(imageUrl, request.size);
+
     return {
       id: `design-${Date.now()}-${index}`,
-      imageUrl,
+      imageUrl: labeledImageUrl,
       promptUsed: mainPrompt,
       timestamp: Date.now(),
     };
