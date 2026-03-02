@@ -65,6 +65,26 @@ Be extremely detailed. Do not omit or simplify anything.`
 };
 
 // ─────────────────────────────────────────────
+// フォーマットPDF読み込み
+// ─────────────────────────────────────────────
+const loadFormatPDF = async (size: string): Promise<{ data: string; mimeType: string } | null> => {
+  try {
+    const res = await fetch(`/formats/format-${size}.pdf`);
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return {
+      data: btoa(binary),
+      mimeType: 'application/pdf',
+    };
+  } catch {
+    return null;
+  }
+};
+
+// ─────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────
 export const generateDarumaDesigns = async (
@@ -78,11 +98,14 @@ export const generateDarumaDesigns = async (
     characterDescription = await extractCharacterDescription(ai, request.referenceImages);
   }
 
+  // フォーマットPDFを1回だけ読み込み（全パターンで共有）
+  const formatPDF = await loadFormatPDF(request.size);
+
   // Step 2: 指定枚数を並列生成
   const patternCount = request.patternCount ?? 3;
   const promises = [];
   for (let i = 0; i < patternCount; i++) {
-    promises.push(generateSinglePattern(ai, request, i, characterDescription));
+    promises.push(generateSinglePattern(ai, request, i, characterDescription, formatPDF));
   }
 
   const results = await Promise.all(promises);
@@ -96,10 +119,17 @@ const generateSinglePattern = async (
   ai: GoogleGenAI,
   request: DesignRequest,
   index: number,
-  characterDescription: string = ''
+  characterDescription: string = '',
+  formatPDF: { data: string; mimeType: string } | null = null
 ): Promise<GeneratedDesign | null> => {
   try {
     const parts: any[] = [];
+
+    // フォーマットPDFを先頭に追加
+    if (formatPDF) {
+      parts.push({ inlineData: { data: formatPDF.data, mimeType: formatPDF.mimeType } });
+      parts.push({ text: `The above PDF is the official format specification for the ${request.size} Daruma doll. Follow its dimensions, layout guidelines, and structural specifications precisely.` });
+    }
 
     // 参考画像を追加（視覚的グラウンディング用）
     if (request.referenceImages && request.referenceImages.length > 0) {
@@ -110,7 +140,9 @@ const generateSinglePattern = async (
 
     const sizeContext = request.size === '5cm'
       ? "Target Product Size: 5cm (Small). Bold, readable at small scale, maintain traditional Daruma silhouette."
-      : "Target Product Size: 11cm (Medium/Large). Intricate details and high-fidelity textures.";
+      : request.size === '11cm'
+      ? "Target Product Size: 11cm (Medium). Intricate details and high-fidelity textures."
+      : "Target Product Size: 17cm (Large). Maximum detail, elaborate patterns, fine textures suitable for the largest surface area.";
 
     const glossyInstruction = request.glossy
       ? `Material & Surface: Traditional Japanese lacquer (urushi) finish with rich glossy sheen. Realistic light reflections and specular highlights. Hand-painted lacquerware look.`

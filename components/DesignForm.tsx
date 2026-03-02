@@ -9,7 +9,7 @@ interface DesignFormProps {
 export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) => {
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('');
-  const [size, setSize] = useState<'5cm' | '11cm'>('5cm');
+  const [size, setSize] = useState<'5cm' | '11cm' | '17cm'>('5cm');
   const [glossy, setGlossy] = useState(true);
   const [brandColorEnabled, setBrandColorEnabled] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [brandColors, setBrandColors] = useState<[string, string, string]>(['#E60012', '#FFFFFF', '#000000']);
@@ -89,38 +89,28 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
            <label className="block text-sm font-bold text-stone-700 mb-2">
             達磨のサイズ（フォーマット）
           </label>
-          <div className="grid grid-cols-2 gap-4">
-            <label className={`
-              cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all
-              ${size === '5cm' ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-600'}
-            `}>
-              <input 
-                type="radio" 
-                name="size" 
-                value="5cm" 
-                checked={size === '5cm'} 
-                onChange={() => setSize('5cm')}
-                className="hidden"
-              />
-              <span className="font-bold text-lg">5cm</span>
-              <span className="text-xs">可愛いらしい・密度高め</span>
-            </label>
-            
-            <label className={`
-              cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all
-              ${size === '11cm' ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-600'}
-            `}>
-              <input 
-                type="radio" 
-                name="size" 
-                value="11cm" 
-                checked={size === '11cm'} 
-                onChange={() => setSize('11cm')}
-                className="hidden"
-              />
-              <span className="font-bold text-lg">11cm</span>
-              <span className="text-xs">迫力重視・詳細な描き込み</span>
-            </label>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { value: '5cm',  label: '5cm',  desc: '可愛いらしい\n密度高め' },
+              { value: '11cm', label: '11cm', desc: '迫力重視\n詳細な描き込み' },
+              { value: '17cm', label: '17cm', desc: '最大サイズ\n精緻な仕上げ' },
+            ] as const).map(({ value, label, desc }) => (
+              <label key={value} className={`
+                cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-all
+                ${size === value ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-600'}
+              `}>
+                <input
+                  type="radio"
+                  name="size"
+                  value={value}
+                  checked={size === value}
+                  onChange={() => setSize(value)}
+                  className="hidden"
+                />
+                <span className="font-bold text-lg">{label}</span>
+                <span className="text-[10px] text-center whitespace-pre-line leading-tight">{desc}</span>
+              </label>
+            ))}
           </div>
         </div>
 
