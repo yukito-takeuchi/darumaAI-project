@@ -187,7 +187,7 @@ ${brandColorInstruction}`;
     parts.push({ text: mainPrompt });
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: 'gemini-3-pro-image-preview',
       contents: { parts },
       config: {
         imageConfig: {
@@ -257,7 +257,7 @@ Instruction: ${instruction}`
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: 'gemini-3-pro-image-preview',
       contents: { parts },
       config: {
         imageConfig: { imageSize: '2K', aspectRatio: '16:9' },
@@ -325,7 +325,7 @@ Output: One photorealistic image only. The doll should look three-dimensional an
     ];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: 'gemini-3-pro-image-preview',
       contents: { parts },
       config: {
         imageConfig: { imageSize: '2K', aspectRatio: '1:1' },
