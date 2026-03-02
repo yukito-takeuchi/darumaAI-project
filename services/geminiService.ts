@@ -94,9 +94,12 @@ const extractPortraitFeatures = async (
   const parts = [
     { inlineData: { data: portrait.data, mimeType: portrait.mimeType } },
     {
-      text: `Analyze this person's face for creating a portrait caricature on a Daruma doll. Describe their physical features concisely (max 120 words):
-Face shape, skin tone, eye shape/color/size, eyebrow thickness and shape, nose shape, mouth/lip style, distinctive features (moles, freckles, dimples, scars, beard, glasses, etc.), hair color and style.
-Focus on the most recognizable and characteristic features. Output only the description.`
+      text: `Analyze this person's photo for creating a caricature bust portrait illustrated inside a Daruma egg shape. Describe concisely (max 150 words):
+
+FACE: face shape, skin tone, eye shape/color, eyebrow style, nose shape, mouth/lips, distinctive features (beard, glasses, moles, etc.), hair color and style.
+UPPER BODY & CLOTHING: clothing type (suit, shirt, tie, etc.), jacket color, shirt color, tie color/pattern, any visible accessories (pin, pocket square, etc.).
+
+Focus on the most recognizable features for caricature reproduction. Output only the description.`
     }
   ];
   try {
@@ -284,12 +287,22 @@ The attached reference images are provided for visual confirmation. Reproduce al
       : '';
 
     const faceInstruction = request.portrait && portraitDescription
-      ? `Face Design — PORTRAIT MODE (CRITICAL):
-Capture the likeness of the real person shown in the photo above as a caricature painted on the Daruma doll's face.
-Key facial features to reproduce:
+      ? `Portrait Caricature Design — CRITICAL:
+CONCEPT: A flat 2D illustrated caricature bust portrait of the real person fills the front of the Daruma egg shape. Think of it like a "person inside an egg" — the daruma's oval silhouette becomes the outer boundary of the figure, and the person's caricature (face + upper body) naturally fills the interior.
+
+Person's features to reproduce (from the photo above):
 ${portraitDescription}
-Exaggerate distinctive features while maintaining recognizability. Eyes, nose, mouth, hair, and characteristic features (glasses, beard, hairstyle, etc.) must be faithfully represented.
-This is NOT a generic Daruma face — it must look like the actual person in the photo.`
+
+Illustration requirements:
+- Style: flat 2D cartoon/illustration (NOT photorealistic). Clean outlines, simplified shapes, solid color fills.
+- Caricature: slightly rounded and exaggerated proportions. Face takes up the upper ~60%, clothing fills the lower ~40%.
+- FACE: Reproduce the person's actual face — eyes, eyebrows, nose, mouth, skin tone, hairstyle — faithfully as a caricature. Make them recognizable.
+- CLOTHING: Include neck, shoulders, and upper body clothing (jacket, shirt, tie, etc.) in the person's actual colors from the photo. The clothing fills the lower portion of the egg naturally.
+- The caricature bust is contained entirely within the smooth Daruma oval. Nothing extends beyond the silhouette.
+
+Back and side views: Show the Daruma egg shape from those angles. Back view may show the back of the figure's head/hair. Side views show the egg profile with a natural side silhouette of the caricature.
+
+Do NOT draw a generic blank Daruma face. Do NOT show only the face without clothing. Do NOT make it photorealistic.`
       : request.referenceImages && request.referenceImages.length > 0
       ? `Face Design — CRITICAL:
 ${characterDescription
