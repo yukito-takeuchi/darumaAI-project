@@ -11,6 +11,7 @@ export interface DesignRequest {
   size: '5cm' | '11cm';
   glossy: boolean;
   brandColors?: string[];
+  patternCount: 3 | 6;
   referenceImages: ReferenceImage[];
 }
 

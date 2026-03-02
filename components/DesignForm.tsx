@@ -13,6 +13,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
   const [glossy, setGlossy] = useState(true);
   const [brandColorEnabled, setBrandColorEnabled] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [brandColors, setBrandColors] = useState<[string, string, string]>(['#E60012', '#FFFFFF', '#000000']);
+  const [patternCount, setPatternCount] = useState<3 | 6>(3);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -74,6 +75,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
       brandColors: brandColorEnabled.some(e => e)
         ? brandColors.filter((_, i) => brandColorEnabled[i])
         : undefined,
+      patternCount,
       referenceImages
     });
   };
@@ -322,15 +324,39 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
           </div>
         </div>
 
-        {/* Submit Action */}
-        <div className="pt-2">
+        {/* Pattern Count & Submit */}
+        <div className="pt-2 space-y-3">
+          {/* 枚数切り替え */}
+          <div>
+            <p className="text-xs font-bold text-stone-500 mb-2">生成枚数</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([3, 6] as const).map(n => (
+                <label key={n} className={`
+                  cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center gap-1 transition-all
+                  ${patternCount === n ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-500'}
+                `}>
+                  <input
+                    type="radio"
+                    name="patternCount"
+                    value={n}
+                    checked={patternCount === n}
+                    onChange={() => setPatternCount(n)}
+                    className="hidden"
+                  />
+                  <span className="font-bold text-base">{n}枚</span>
+                  <span className="text-[10px]">{n === 3 ? 'スタンダード（推奨）' : 'ワイド（クレジット消費大）'}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isGenerating}
             className={`
               w-full py-4 px-6 rounded-xl font-bold text-lg text-white shadow-lg transition-all
-              ${isGenerating 
-                ? 'bg-stone-400 cursor-wait' 
+              ${isGenerating
+                ? 'bg-stone-400 cursor-wait'
                 : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 hover:shadow-red-200 transform hover:-translate-y-0.5'}
             `}
           >
@@ -343,7 +369,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                 {size}デザイン案を生成中...
               </span>
             ) : (
-              `${size}用デザイン案を3つ生成`
+              `${size}用デザイン案を${patternCount}枚生成`
             )}
           </button>
         </div>

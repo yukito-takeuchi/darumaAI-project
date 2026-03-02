@@ -78,8 +78,8 @@ export const generateDarumaDesigns = async (
     characterDescription = await extractCharacterDescription(ai, request.referenceImages);
   }
 
-  // Step 2: テキスト記述を使って3枚並列生成
-  const patternCount = 3;
+  // Step 2: 指定枚数を並列生成
+  const patternCount = request.patternCount ?? 3;
   const promises = [];
   for (let i = 0; i < patternCount; i++) {
     promises.push(generateSinglePattern(ai, request, i, characterDescription));
