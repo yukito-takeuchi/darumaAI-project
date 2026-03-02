@@ -12,6 +12,7 @@ export interface DesignRequest {
   glossy: boolean;
   brandColors?: string[];
   patternCount: 3 | 6;
+  portrait?: { data: string; mimeType: string };
   referenceImages: ReferenceImage[];
 }
 

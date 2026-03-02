@@ -85,6 +85,34 @@ const loadFormatPDF = async (size: string): Promise<{ data: string; mimeType: st
 };
 
 // ─────────────────────────────────────────────
+// Step 1 (似顔絵): 人物写真から顔の特徴をテキスト化
+// ─────────────────────────────────────────────
+const extractPortraitFeatures = async (
+  ai: GoogleGenAI,
+  portrait: { data: string; mimeType: string }
+): Promise<string> => {
+  const parts = [
+    { inlineData: { data: portrait.data, mimeType: portrait.mimeType } },
+    {
+      text: `Analyze this person's face for creating a portrait caricature on a Daruma doll. Describe their physical features concisely (max 120 words):
+Face shape, skin tone, eye shape/color/size, eyebrow thickness and shape, nose shape, mouth/lip style, distinctive features (moles, freckles, dimples, scars, beard, glasses, etc.), hair color and style.
+Focus on the most recognizable and characteristic features. Output only the description.`
+    }
+  ];
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: { parts },
+    });
+    const text = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text;
+    return text || '';
+  } catch (error) {
+    console.error('Portrait feature extraction failed:', error);
+    return '';
+  }
+};
+
+// ─────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────
 export const generateDarumaDesigns = async (
@@ -98,14 +126,22 @@ export const generateDarumaDesigns = async (
     characterDescription = await extractCharacterDescription(ai, request.referenceImages);
   }
 
+  // Step 1 (似顔絵): 人物写真の顔の特徴をテキスト化
+  let portraitDescription = '';
+  if (request.portrait) {
+    portraitDescription = await extractPortraitFeatures(ai, request.portrait);
+  }
+
   // フォーマットPDFを1回だけ読み込み（全パターンで共有）
+  // 似顔絵モード時は似顔絵用PDFも追加読み込み
   const formatPDF = await loadFormatPDF(request.size);
+  const portraitPDF = request.portrait ? await loadFormatPDF('portrait') : null;
 
   // Step 2: 指定枚数を並列生成
   const patternCount = request.patternCount ?? 3;
   const promises = [];
   for (let i = 0; i < patternCount; i++) {
-    promises.push(generateSinglePattern(ai, request, i, characterDescription, formatPDF));
+    promises.push(generateSinglePattern(ai, request, i, characterDescription, formatPDF, portraitDescription, portraitPDF));
   }
 
   const results = await Promise.all(promises);
@@ -176,15 +212,29 @@ const generateSinglePattern = async (
   request: DesignRequest,
   index: number,
   characterDescription: string = '',
-  formatPDF: { data: string; mimeType: string } | null = null
+  formatPDF: { data: string; mimeType: string } | null = null,
+  portraitDescription: string = '',
+  portraitPDF: { data: string; mimeType: string } | null = null
 ): Promise<GeneratedDesign | null> => {
   try {
     const parts: any[] = [];
 
-    // フォーマットPDFを先頭に追加
+    // 似顔絵フォーマットPDF（似顔絵モード時）
+    if (portraitPDF) {
+      parts.push({ inlineData: { data: portraitPDF.data, mimeType: portraitPDF.mimeType } });
+      parts.push({ text: `The above PDF is the official portrait (似顔絵) format specification for this Daruma doll. Follow its layout and artistic style precisely.` });
+    }
+
+    // サイズフォーマットPDFを先頭に追加
     if (formatPDF) {
       parts.push({ inlineData: { data: formatPDF.data, mimeType: formatPDF.mimeType } });
       parts.push({ text: `The above PDF is the official format specification for the ${request.size} Daruma doll. Follow its dimensions, layout guidelines, and structural specifications precisely.` });
+    }
+
+    // 似顔絵用の人物写真（視覚的参照）
+    if (request.portrait) {
+      parts.push({ inlineData: { data: request.portrait.data, mimeType: request.portrait.mimeType } });
+      parts.push({ text: `The above photo shows the person whose likeness should be captured in the Daruma doll's face as a portrait caricature.` });
     }
 
     // 参考画像を追加（視覚的グラウンディング用）
@@ -233,7 +283,14 @@ ${characterDescription}
 The attached reference images are provided for visual confirmation. Reproduce all features including colors faithfully.`
       : '';
 
-    const faceInstruction = request.referenceImages && request.referenceImages.length > 0
+    const faceInstruction = request.portrait && portraitDescription
+      ? `Face Design — PORTRAIT MODE (CRITICAL):
+Capture the likeness of the real person shown in the photo above as a caricature painted on the Daruma doll's face.
+Key facial features to reproduce:
+${portraitDescription}
+Exaggerate distinctive features while maintaining recognizability. Eyes, nose, mouth, hair, and characteristic features (glasses, beard, hairstyle, etc.) must be faithfully represented.
+This is NOT a generic Daruma face — it must look like the actual person in the photo.`
+      : request.referenceImages && request.referenceImages.length > 0
       ? `Face Design — CRITICAL:
 ${characterDescription
   ? `Reproduce the character's face exactly as described in the CHARACTER DESCRIPTION above. Every facial feature (eyes, eyebrows, skin tone, mouth, markings, accessories) must match precisely. The character must be immediately recognizable. Brand colors do NOT apply to the face.`
@@ -245,7 +302,7 @@ The Daruma body MUST maintain its traditional smooth oval/egg shape. Physical pr
 Any character appendages (horns, tail, wings, animal ears) MUST be rendered as painted/illustrated decorations ON the surface — not physically extending beyond the oval outline.
 Final silhouette must be a clean, smooth Daruma oval from all 4 angles.`;
 
-    const mainPrompt = `Design a Japanese Daruma doll.
+    const mainPrompt = `Design a${request.portrait ? ' Portrait (似顔絵)' : ''} Japanese Daruma doll.
 Variation: Pattern ${index + 1}.
 Style Direction: ${request.style}.
 Specific Details: ${request.prompt}.
