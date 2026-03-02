@@ -264,6 +264,7 @@ Arrange EXACTLY 4 views of the SAME Daruma doll in a SINGLE HORIZONTAL ROW, even
 Left to right order:  [1. Front]  [2. Back]  [3. Right Side]  [4. Left Side]
 All 4 dolls must be the same size and vertical alignment. Equal gaps between each view.
 No 2×2 grid. No stacking. Horizontal line only.
+Do NOT include any text, labels, titles, captions, or annotations anywhere in the image.
 Production-ready, high resolution, sharp details.
 
 ${brandColorInstruction}`;
