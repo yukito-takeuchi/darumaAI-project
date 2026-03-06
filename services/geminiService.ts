@@ -67,9 +67,9 @@ Be extremely detailed. Do not omit or simplify anything.`
 // ─────────────────────────────────────────────
 // フォーマットPDF読み込み
 // ─────────────────────────────────────────────
-const loadFormatPDF = async (size: string): Promise<{ data: string; mimeType: string } | null> => {
+const loadFormatImage = async (size: string): Promise<{ data: string; mimeType: string } | null> => {
   try {
-    const res = await fetch(`/formats/format-${size}.pdf`);
+    const res = await fetch(`/formats/format-${size}.png`);
     if (!res.ok) return null;
     const buffer = await res.arrayBuffer();
     const bytes = new Uint8Array(buffer);
@@ -77,7 +77,7 @@ const loadFormatPDF = async (size: string): Promise<{ data: string; mimeType: st
     bytes.forEach(b => binary += String.fromCharCode(b));
     return {
       data: btoa(binary),
-      mimeType: 'application/pdf',
+      mimeType: 'image/png',
     };
   } catch {
     return null;
@@ -135,10 +135,10 @@ export const generateDarumaDesigns = async (
     portraitDescription = await extractPortraitFeatures(ai, request.portrait);
   }
 
-  // フォーマットPDFを1回だけ読み込み（全パターンで共有）
-  // 似顔絵モード時は似顔絵用PDFも追加読み込み
-  const formatPDF = await loadFormatPDF(request.size);
-  const portraitPDF = request.portrait ? await loadFormatPDF('portrait') : null;
+  // フォーマット画像を1回だけ読み込み（全パターンで共有）
+  // 似顔絵モード時は似顔絵用画像も追加読み込み
+  const formatPDF = await loadFormatImage(request.size);
+  const portraitPDF = request.portrait ? await loadFormatImage('portrait') : null;
 
   // Step 2: 指定枚数を並列生成
   const patternCount = request.patternCount ?? 3;
@@ -222,16 +222,16 @@ const generateSinglePattern = async (
   try {
     const parts: any[] = [];
 
-    // 似顔絵フォーマットPDF（似顔絵モード時）
+    // 似顔絵フォーマット画像（似顔絵モード時）
     if (portraitPDF) {
       parts.push({ inlineData: { data: portraitPDF.data, mimeType: portraitPDF.mimeType } });
-      parts.push({ text: `The above PDF is the official portrait (似顔絵) format specification for this Daruma doll. Follow its layout and artistic style precisely.` });
+      parts.push({ text: `FORMAT REFERENCE IMAGE (Portrait/似顔絵): This image shows the official format specification for the portrait Daruma doll. You MUST reproduce the exact 3D shape, proportions, surface contours, and structural details shown. Treat this as the definitive physical template.` });
     }
 
-    // サイズフォーマットPDFを先頭に追加
+    // サイズフォーマット画像
     if (formatPDF) {
       parts.push({ inlineData: { data: formatPDF.data, mimeType: formatPDF.mimeType } });
-      parts.push({ text: `The above PDF is the official format specification for the ${request.size} Daruma doll. Follow its dimensions, layout guidelines, and structural specifications precisely.` });
+      parts.push({ text: `FORMAT REFERENCE IMAGE (${request.size}): This image shows the official format specification for the ${request.size} Daruma doll. You MUST faithfully reproduce: the exact 3D body shape and proportions, all surface contours and indentations (凹凸), the face area recess depth, the bottom flat base, and any structural details visible in this image. This is the definitive physical template — do NOT use a generic Daruma shape.` });
     }
 
     // 似顔絵用の人物写真（視覚的参照）
