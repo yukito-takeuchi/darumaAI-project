@@ -65,6 +65,57 @@ Be extremely detailed. Do not omit or simplify anything.`
 };
 
 // ─────────────────────────────────────────────
+// フォーマットPDF読み込み
+// ─────────────────────────────────────────────
+const loadFormatPDF = async (size: string): Promise<{ data: string; mimeType: string } | null> => {
+  try {
+    const res = await fetch(`/formats/format-${size}.pdf`);
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return {
+      data: btoa(binary),
+      mimeType: 'application/pdf',
+    };
+  } catch {
+    return null;
+  }
+};
+
+// ─────────────────────────────────────────────
+// Step 1 (似顔絵): 人物写真から顔の特徴をテキスト化
+// ─────────────────────────────────────────────
+const extractPortraitFeatures = async (
+  ai: GoogleGenAI,
+  portrait: { data: string; mimeType: string }
+): Promise<string> => {
+  const parts = [
+    { inlineData: { data: portrait.data, mimeType: portrait.mimeType } },
+    {
+      text: `Analyze this person's photo for creating a caricature bust portrait illustrated inside a Daruma egg shape. Describe concisely (max 150 words):
+
+FACE: face shape, skin tone, eye shape/color, eyebrow style, nose shape, mouth/lips, distinctive features (beard, glasses, moles, etc.), hair color and style.
+UPPER BODY & CLOTHING: clothing type (suit, shirt, tie, etc.), jacket color, shirt color, tie color/pattern, any visible accessories (pin, pocket square, etc.).
+
+Focus on the most recognizable features for caricature reproduction. Output only the description.`
+    }
+  ];
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: { parts },
+    });
+    const text = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text;
+    return text || '';
+  } catch (error) {
+    console.error('Portrait feature extraction failed:', error);
+    return '';
+  }
+};
+
+// ─────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────
 export const generateDarumaDesigns = async (
@@ -78,15 +129,82 @@ export const generateDarumaDesigns = async (
     characterDescription = await extractCharacterDescription(ai, request.referenceImages);
   }
 
-  // Step 2: テキスト記述を使って3枚並列生成
-  const patternCount = 3;
+  // Step 1 (似顔絵): 人物写真の顔の特徴をテキスト化
+  let portraitDescription = '';
+  if (request.portrait) {
+    portraitDescription = await extractPortraitFeatures(ai, request.portrait);
+  }
+
+  // フォーマットPDFを1回だけ読み込み（全パターンで共有）
+  // 似顔絵モード時は似顔絵用PDFも追加読み込み
+  const formatPDF = await loadFormatPDF(request.size);
+  const portraitPDF = request.portrait ? await loadFormatPDF('portrait') : null;
+
+  // Step 2: 指定枚数を並列生成
+  const patternCount = request.patternCount ?? 3;
   const promises = [];
   for (let i = 0; i < patternCount; i++) {
-    promises.push(generateSinglePattern(ai, request, i, characterDescription));
+    promises.push(generateSinglePattern(ai, request, i, characterDescription, formatPDF, portraitDescription, portraitPDF));
   }
 
   const results = await Promise.all(promises);
   return results.filter((res): res is GeneratedDesign => res !== null);
+};
+
+// ─────────────────────────────────────────────
+// フォーマットラベルを画像の左上に追加
+// ─────────────────────────────────────────────
+const addFormatLabel = (imageDataUrl: string, size: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(imageDataUrl); return; }
+
+      ctx.drawImage(img, 0, 0);
+
+      const label = `${size} 達磨`;
+      const fontSize = Math.max(28, Math.round(img.width * 0.022));
+      const padding = Math.round(fontSize * 0.55);
+      const x = Math.round(img.width * 0.025);
+      const y = Math.round(img.height * 0.03);
+
+      ctx.font = `bold ${fontSize}px 'Helvetica Neue', Arial, sans-serif`;
+      const textW = ctx.measureText(label).width;
+      const boxW = textW + padding * 2;
+      const boxH = fontSize + padding * 2;
+      const radius = 6;
+
+      // 白背景ボックス
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#222222';
+      ctx.lineWidth = Math.max(2, Math.round(img.width * 0.0015));
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + boxW - radius, y);
+      ctx.arcTo(x + boxW, y, x + boxW, y + radius, radius);
+      ctx.lineTo(x + boxW, y + boxH - radius);
+      ctx.arcTo(x + boxW, y + boxH, x + boxW - radius, y + boxH, radius);
+      ctx.lineTo(x + radius, y + boxH);
+      ctx.arcTo(x, y + boxH, x, y + boxH - radius, radius);
+      ctx.lineTo(x, y + radius);
+      ctx.arcTo(x, y, x + radius, y, radius);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // テキスト
+      ctx.fillStyle = '#111111';
+      ctx.fillText(label, x + padding, y + padding + fontSize * 0.82);
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(imageDataUrl);
+    img.src = imageDataUrl;
+  });
 };
 
 // ─────────────────────────────────────────────
@@ -96,10 +214,31 @@ const generateSinglePattern = async (
   ai: GoogleGenAI,
   request: DesignRequest,
   index: number,
-  characterDescription: string = ''
+  characterDescription: string = '',
+  formatPDF: { data: string; mimeType: string } | null = null,
+  portraitDescription: string = '',
+  portraitPDF: { data: string; mimeType: string } | null = null
 ): Promise<GeneratedDesign | null> => {
   try {
     const parts: any[] = [];
+
+    // 似顔絵フォーマットPDF（似顔絵モード時）
+    if (portraitPDF) {
+      parts.push({ inlineData: { data: portraitPDF.data, mimeType: portraitPDF.mimeType } });
+      parts.push({ text: `The above PDF is the official portrait (似顔絵) format specification for this Daruma doll. Follow its layout and artistic style precisely.` });
+    }
+
+    // サイズフォーマットPDFを先頭に追加
+    if (formatPDF) {
+      parts.push({ inlineData: { data: formatPDF.data, mimeType: formatPDF.mimeType } });
+      parts.push({ text: `The above PDF is the official format specification for the ${request.size} Daruma doll. Follow its dimensions, layout guidelines, and structural specifications precisely.` });
+    }
+
+    // 似顔絵用の人物写真（視覚的参照）
+    if (request.portrait) {
+      parts.push({ inlineData: { data: request.portrait.data, mimeType: request.portrait.mimeType } });
+      parts.push({ text: `The above photo shows the person whose likeness should be captured in the Daruma doll's face as a portrait caricature.` });
+    }
 
     // 参考画像を追加（視覚的グラウンディング用）
     if (request.referenceImages && request.referenceImages.length > 0) {
@@ -110,7 +249,9 @@ const generateSinglePattern = async (
 
     const sizeContext = request.size === '5cm'
       ? "Target Product Size: 5cm (Small). Bold, readable at small scale, maintain traditional Daruma silhouette."
-      : "Target Product Size: 11cm (Medium/Large). Intricate details and high-fidelity textures.";
+      : request.size === '11cm'
+      ? "Target Product Size: 11cm (Medium). Intricate details and high-fidelity textures."
+      : "Target Product Size: 17cm (Large). Maximum detail, elaborate patterns, fine textures suitable for the largest surface area.";
 
     const glossyInstruction = request.glossy
       ? `Material & Surface: Traditional Japanese lacquer (urushi) finish with rich glossy sheen. Realistic light reflections and specular highlights. Hand-painted lacquerware look.`
@@ -145,7 +286,36 @@ ${characterDescription}
 The attached reference images are provided for visual confirmation. Reproduce all features including colors faithfully.`
       : '';
 
-    const faceInstruction = request.referenceImages && request.referenceImages.length > 0
+    const faceInstruction = request.portrait && portraitDescription
+      ? `Portrait Caricature Design — CRITICAL:
+
+CONCEPT: A flat 2D illustrated caricature bust portrait of the real person fills the interior of the Daruma egg shape. The egg silhouette is the outer boundary. The person's face and upper body fill the interior naturally.
+
+Person's features from the photo:
+${portraitDescription}
+
+══ ILLUSTRATION STYLE (applies to ALL 4 views) ══
+- Flat 2D cartoon illustration. Clean black outlines. Solid color fills.
+- NO 3D rendering. NO dark dramatic shadows. NO photorealism.
+- The background inside the egg (areas not covered by the figure) must be a simple light neutral color (light beige or off-white) — NEVER dark or black.
+- All 4 views must be consistent in line weight, color palette, and illustration style.
+
+══ FRONT VIEW ══
+- Face fills upper ~60% of egg interior. Clothing fills lower ~40%.
+- Reproduce face features, hair, skin tone faithfully as a caricature.
+- Reproduce clothing (jacket color, shirt, tie) in actual colors from the photo.
+
+══ BACK VIEW ══
+- Show back of head (hair, rounded shape of head) in upper portion — flat 2D style.
+- Show back of jacket/suit in lower portion — same flat 2D style.
+- Light neutral background inside egg.
+
+══ SIDE VIEWS (Left & Right) ══
+- Show side profile: face profile (nose, chin, ear visible), side of hair, shoulder and side of jacket.
+- Same flat 2D illustration style, light neutral background inside egg.
+
+Do NOT draw a generic Daruma face. Do NOT show only the face without clothing.`
+      : request.referenceImages && request.referenceImages.length > 0
       ? `Face Design — CRITICAL:
 ${characterDescription
   ? `Reproduce the character's face exactly as described in the CHARACTER DESCRIPTION above. Every facial feature (eyes, eyebrows, skin tone, mouth, markings, accessories) must match precisely. The character must be immediately recognizable. Brand colors do NOT apply to the face.`
@@ -157,8 +327,9 @@ The Daruma body MUST maintain its traditional smooth oval/egg shape. Physical pr
 Any character appendages (horns, tail, wings, animal ears) MUST be rendered as painted/illustrated decorations ON the surface — not physically extending beyond the oval outline.
 Final silhouette must be a clean, smooth Daruma oval from all 4 angles.`;
 
-    const mainPrompt = `Design a Japanese Daruma doll.
+    const mainPrompt = `Design a${request.portrait ? ' Portrait (似顔絵) — FLAT 2D ILLUSTRATION STYLE' : ''} Japanese Daruma doll.
 Variation: Pattern ${index + 1}.
+${request.portrait ? 'Rendering: Flat 2D cartoon illustration. Clean outlines, solid color fills. NOT photorealistic, NOT 3D rendered.' : ''}
 Style Direction: ${request.style}.
 Specific Details: ${request.prompt}.
 
@@ -171,16 +342,13 @@ ${faceInstruction}
 ${sizeContext}
 ${glossyInstruction}
 
-Required Layout: A high-quality "Character Sheet" with EXACTLY 4 views of the SAME Daruma doll:
-1. Front View
-2. Back View
-3. Right Side View
-4. Left Side View
-
-Arrange in a clean horizontal line or 2x2 grid on a neutral background.
-Ensure high consistency across all 4 views.
-Production-ready design suitable for 3D modeling or printing.
-High resolution, sharp details.
+Required Layout — STRICT:
+Arrange EXACTLY 4 views of the SAME Daruma doll in a SINGLE HORIZONTAL ROW, evenly spaced, on a clean white background.
+Left to right order:  [1. Front]  [2. Back]  [3. Right Side]  [4. Left Side]
+All 4 dolls must be the same size and vertical alignment. Equal gaps between each view.
+No 2×2 grid. No stacking. Horizontal line only.
+Do NOT include any text, labels, titles, captions, or annotations anywhere in the image.
+Production-ready, high resolution, sharp details.
 
 ${brandColorInstruction}`;
 
@@ -213,9 +381,12 @@ ${brandColorInstruction}`;
 
     if (!imageUrl) return null;
 
+    // フォーマットラベルを左上に追加
+    const labeledImageUrl = await addFormatLabel(imageUrl, request.size);
+
     return {
       id: `design-${Date.now()}-${index}`,
-      imageUrl,
+      imageUrl: labeledImageUrl,
       promptUsed: mainPrompt,
       timestamp: Date.now(),
     };
@@ -305,7 +476,7 @@ export const generatePhotorealisticPhoto = async (
         : 'Create a high-end product photography image of this daruma doll as if it were a finished product. Professional studio lighting, clean white or subtle gradient background, sharp focus, commercial quality. Suitable for catalogs and client presentations.';
 
     const keychainInstruction = options?.withKeychain
-      ? `\nKeychain Attachment: The daruma doll has a small metal ring attached to the top of its head, connected to a ball chain (bead chain) keychain. The metal ring and ball chain should look realistic with a silver/chrome metallic finish. The chain hangs naturally with gravity. The doll itself should be miniature/compact sized, suitable as a keychain accessory.\n`
+      ? `\nKeychain Attachment: The daruma doll is displayed as a finished keychain product. Structure from top to bottom: (1) a large round spring-snap O-ring (trigger clasp) at the very top — silver metallic finish with realistic reflections, (2) a short curb-link chain of 4–5 oval interlocking links hanging down from the O-ring, (3) a small connecting O-ring linking the chain to the daruma's head, (4) the daruma doll itself at the bottom — its head top connects to the small ring. The entire keychain hangs vertically. No key charm or any other element at the bottom. All metal parts are silver/chrome. The doll is miniature/compact sized.\nOrientation: The daruma doll MUST face directly forward toward the camera (front view). The face design must be fully visible and centered. Do NOT show a side view, angled view, or back view of the doll.\n`
       : '';
 
     const prompt = `

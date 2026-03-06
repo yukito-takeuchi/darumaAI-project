@@ -9,10 +9,13 @@ interface DesignFormProps {
 export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) => {
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('');
-  const [size, setSize] = useState<'5cm' | '11cm'>('5cm');
+  const [size, setSize] = useState<'5cm' | '11cm' | '17cm'>('5cm');
   const [glossy, setGlossy] = useState(true);
   const [brandColorEnabled, setBrandColorEnabled] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [brandColors, setBrandColors] = useState<[string, string, string]>(['#E60012', '#FFFFFF', '#000000']);
+  const [patternCount, setPatternCount] = useState<3 | 6>(3);
+  const [portraitMode, setPortraitMode] = useState(false);
+  const [portraitImage, setPortraitImage] = useState<{ data: string; mimeType: string } | null>(null);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -74,7 +77,9 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
       brandColors: brandColorEnabled.some(e => e)
         ? brandColors.filter((_, i) => brandColorEnabled[i])
         : undefined,
-      referenceImages
+      patternCount,
+      portrait: portraitMode && portraitImage ? portraitImage : undefined,
+      referenceImages: portraitMode ? [] : referenceImages
     });
   };
 
@@ -87,39 +92,107 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
            <label className="block text-sm font-bold text-stone-700 mb-2">
             達磨のサイズ（フォーマット）
           </label>
-          <div className="grid grid-cols-2 gap-4">
-            <label className={`
-              cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all
-              ${size === '5cm' ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-600'}
-            `}>
-              <input 
-                type="radio" 
-                name="size" 
-                value="5cm" 
-                checked={size === '5cm'} 
-                onChange={() => setSize('5cm')}
-                className="hidden"
-              />
-              <span className="font-bold text-lg">5cm</span>
-              <span className="text-xs">可愛いらしい・密度高め</span>
-            </label>
-            
-            <label className={`
-              cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all
-              ${size === '11cm' ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-600'}
-            `}>
-              <input 
-                type="radio" 
-                name="size" 
-                value="11cm" 
-                checked={size === '11cm'} 
-                onChange={() => setSize('11cm')}
-                className="hidden"
-              />
-              <span className="font-bold text-lg">11cm</span>
-              <span className="text-xs">迫力重視・詳細な描き込み</span>
-            </label>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { value: '5cm',  label: '5cm',  desc: '可愛いらしい\n密度高め' },
+              { value: '11cm', label: '11cm', desc: '迫力重視\n詳細な描き込み' },
+              { value: '17cm', label: '17cm', desc: '最大サイズ\n精緻な仕上げ' },
+            ] as const).map(({ value, label, desc }) => (
+              <label key={value} className={`
+                cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-1 transition-all
+                ${size === value ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-600'}
+              `}>
+                <input
+                  type="radio"
+                  name="size"
+                  value={value}
+                  checked={size === value}
+                  onChange={() => setSize(value)}
+                  className="hidden"
+                />
+                <span className="font-bold text-lg">{label}</span>
+                <span className="text-[10px] text-center whitespace-pre-line leading-tight">{desc}</span>
+              </label>
+            ))}
           </div>
+        </div>
+
+        {/* Portrait Mode */}
+        <div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              role="switch"
+              aria-checked={portraitMode}
+              onClick={() => {
+                const next = !portraitMode;
+                setPortraitMode(next);
+                if (!next) setPortraitImage(null);
+                if (next) setReferenceImages([]);
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${portraitMode ? 'bg-red-500' : 'bg-stone-300'}`}
+            >
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${portraitMode ? 'translate-x-5' : 'translate-x-0'}`} />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-stone-700">似顔絵モード</span>
+              <p className="text-[10px] text-stone-400">{portraitMode ? `ON — ${portraitImage ? '人物写真を読み込み済み' : '人物写真をアップロードしてください'}` : 'OFF — 通常のデザイン生成'}</p>
+            </div>
+          </label>
+
+          {portraitMode && (
+            <div className="mt-3 pl-14">
+              {portraitImage ? (
+                <div className="flex items-center gap-3 p-2 bg-stone-50 border border-stone-200 rounded-lg">
+                  <img
+                    src={`data:${portraitImage.mimeType};base64,${portraitImage.data}`}
+                    alt="人物写真"
+                    className="w-14 h-14 object-cover rounded-lg border border-stone-200 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-stone-700">人物写真</p>
+                    <p className="text-[10px] text-stone-400">この顔を元に似顔絵だるまを生成します</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPortraitImage(null)}
+                    disabled={isGenerating}
+                    className="p-1 hover:bg-stone-200 rounded-full text-stone-400 hover:text-red-500 transition-colors flex-shrink-0"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <label className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed border-red-300 bg-red-50 rounded-xl cursor-pointer hover:border-red-400 hover:bg-red-100 transition-colors ${isGenerating ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isGenerating}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        const b64 = (reader.result as string).split(',')[1];
+                        setPortraitImage({ data: b64, mimeType: file.type });
+                      };
+                      reader.readAsDataURL(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-red-400 flex-shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-bold text-red-600">人物写真をアップロード</p>
+                    <p className="text-[10px] text-red-400">顔がはっきり写った写真を選択</p>
+                  </div>
+                </label>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Glossy Toggle */}
@@ -217,8 +290,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
           </div>
         </div>
 
-        {/* Reference Images Upload (Multiple) */}
-        <div>
+        {/* Reference Images Upload (Multiple) — 似顔絵モード時は非表示 */}
+        {!portraitMode && <div>
           <label className="block text-sm font-bold text-stone-700 mb-2">
             参考素材（ロゴ、キャラクター、色彩など）
           </label>
@@ -288,7 +361,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
               </label>
             </div>
           </div>
-        </div>
+        </div>}
 
         <div className="grid grid-cols-1 gap-6">
           {/* Tone & Manner */}
@@ -322,15 +395,39 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
           </div>
         </div>
 
-        {/* Submit Action */}
-        <div className="pt-2">
+        {/* Pattern Count & Submit */}
+        <div className="pt-2 space-y-3">
+          {/* 枚数切り替え */}
+          <div>
+            <p className="text-xs font-bold text-stone-500 mb-2">生成枚数</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([3, 6] as const).map(n => (
+                <label key={n} className={`
+                  cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center gap-1 transition-all
+                  ${patternCount === n ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-500'}
+                `}>
+                  <input
+                    type="radio"
+                    name="patternCount"
+                    value={n}
+                    checked={patternCount === n}
+                    onChange={() => setPatternCount(n)}
+                    className="hidden"
+                  />
+                  <span className="font-bold text-base">{n}枚</span>
+                  <span className="text-[10px]">{n === 3 ? 'スタンダード（推奨）' : 'ワイド（クレジット消費大）'}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isGenerating}
             className={`
               w-full py-4 px-6 rounded-xl font-bold text-lg text-white shadow-lg transition-all
-              ${isGenerating 
-                ? 'bg-stone-400 cursor-wait' 
+              ${isGenerating
+                ? 'bg-stone-400 cursor-wait'
                 : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 hover:shadow-red-200 transform hover:-translate-y-0.5'}
             `}
           >
@@ -340,10 +437,10 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                {size}デザイン案を生成中...
+                {size}{portraitMode ? ' 似顔絵' : ''}デザイン案を生成中...
               </span>
             ) : (
-              `${size}用デザイン案を3つ生成`
+              `${size}${portraitMode ? ' + 似顔絵' : ''}用デザイン案を${patternCount}枚生成`
             )}
           </button>
         </div>

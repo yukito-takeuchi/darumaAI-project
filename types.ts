@@ -8,9 +8,11 @@ export interface ReferenceImage {
 export interface DesignRequest {
   prompt: string;
   style: string;
-  size: '5cm' | '11cm';
+  size: '5cm' | '11cm' | '17cm';
   glossy: boolean;
   brandColors?: string[];
+  patternCount: 3 | 6;
+  portrait?: { data: string; mimeType: string };
   referenceImages: ReferenceImage[];
 }
 
