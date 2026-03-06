@@ -288,21 +288,33 @@ The attached reference images are provided for visual confirmation. Reproduce al
 
     const faceInstruction = request.portrait && portraitDescription
       ? `Portrait Caricature Design — CRITICAL:
-CONCEPT: A flat 2D illustrated caricature bust portrait of the real person fills the front of the Daruma egg shape. Think of it like a "person inside an egg" — the daruma's oval silhouette becomes the outer boundary of the figure, and the person's caricature (face + upper body) naturally fills the interior.
 
-Person's features to reproduce (from the photo above):
+CONCEPT: A flat 2D illustrated caricature bust portrait of the real person fills the interior of the Daruma egg shape. The egg silhouette is the outer boundary. The person's face and upper body fill the interior naturally.
+
+Person's features from the photo:
 ${portraitDescription}
 
-Illustration requirements:
-- Style: flat 2D cartoon/illustration (NOT photorealistic). Clean outlines, simplified shapes, solid color fills.
-- Caricature: slightly rounded and exaggerated proportions. Face takes up the upper ~60%, clothing fills the lower ~40%.
-- FACE: Reproduce the person's actual face — eyes, eyebrows, nose, mouth, skin tone, hairstyle — faithfully as a caricature. Make them recognizable.
-- CLOTHING: Include neck, shoulders, and upper body clothing (jacket, shirt, tie, etc.) in the person's actual colors from the photo. The clothing fills the lower portion of the egg naturally.
-- The caricature bust is contained entirely within the smooth Daruma oval. Nothing extends beyond the silhouette.
+══ ILLUSTRATION STYLE (applies to ALL 4 views) ══
+- Flat 2D cartoon illustration. Clean black outlines. Solid color fills.
+- NO 3D rendering. NO dark dramatic shadows. NO photorealism.
+- The background inside the egg (areas not covered by the figure) must be a simple light neutral color (light beige or off-white) — NEVER dark or black.
+- All 4 views must be consistent in line weight, color palette, and illustration style.
 
-Back and side views: Show the Daruma egg shape from those angles. Back view may show the back of the figure's head/hair. Side views show the egg profile with a natural side silhouette of the caricature.
+══ FRONT VIEW ══
+- Face fills upper ~60% of egg interior. Clothing fills lower ~40%.
+- Reproduce face features, hair, skin tone faithfully as a caricature.
+- Reproduce clothing (jacket color, shirt, tie) in actual colors from the photo.
 
-Do NOT draw a generic blank Daruma face. Do NOT show only the face without clothing. Do NOT make it photorealistic.`
+══ BACK VIEW ══
+- Show back of head (hair, rounded shape of head) in upper portion — flat 2D style.
+- Show back of jacket/suit in lower portion — same flat 2D style.
+- Light neutral background inside egg.
+
+══ SIDE VIEWS (Left & Right) ══
+- Show side profile: face profile (nose, chin, ear visible), side of hair, shoulder and side of jacket.
+- Same flat 2D illustration style, light neutral background inside egg.
+
+Do NOT draw a generic Daruma face. Do NOT show only the face without clothing.`
       : request.referenceImages && request.referenceImages.length > 0
       ? `Face Design — CRITICAL:
 ${characterDescription
@@ -315,8 +327,9 @@ The Daruma body MUST maintain its traditional smooth oval/egg shape. Physical pr
 Any character appendages (horns, tail, wings, animal ears) MUST be rendered as painted/illustrated decorations ON the surface — not physically extending beyond the oval outline.
 Final silhouette must be a clean, smooth Daruma oval from all 4 angles.`;
 
-    const mainPrompt = `Design a${request.portrait ? ' Portrait (似顔絵)' : ''} Japanese Daruma doll.
+    const mainPrompt = `Design a${request.portrait ? ' Portrait (似顔絵) — FLAT 2D ILLUSTRATION STYLE' : ''} Japanese Daruma doll.
 Variation: Pattern ${index + 1}.
+${request.portrait ? 'Rendering: Flat 2D cartoon illustration. Clean outlines, solid color fills. NOT photorealistic, NOT 3D rendered.' : ''}
 Style Direction: ${request.style}.
 Specific Details: ${request.prompt}.
 
@@ -463,7 +476,7 @@ export const generatePhotorealisticPhoto = async (
         : 'Create a high-end product photography image of this daruma doll as if it were a finished product. Professional studio lighting, clean white or subtle gradient background, sharp focus, commercial quality. Suitable for catalogs and client presentations.';
 
     const keychainInstruction = options?.withKeychain
-      ? `\nKeychain Attachment: The daruma doll has a small metal ring attached to the top of its head, connected to a ball chain (bead chain) keychain. The metal ring and ball chain should look realistic with a silver/chrome metallic finish. The chain hangs naturally with gravity. The doll itself should be miniature/compact sized, suitable as a keychain accessory.\n`
+      ? `\nKeychain Attachment: The daruma doll is displayed as a finished keychain product. Structure from top to bottom: (1) a large round spring-snap O-ring (trigger clasp) at the very top — silver metallic finish with realistic reflections, (2) a short curb-link chain of 4–5 oval interlocking links hanging down from the O-ring, (3) a small connecting O-ring linking the chain to the daruma's head, (4) the daruma doll itself at the bottom — its head top connects to the small ring. The entire keychain hangs vertically. No key charm or any other element at the bottom. All metal parts are silver/chrome. The doll is miniature/compact sized.\n`
       : '';
 
     const prompt = `
