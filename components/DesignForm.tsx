@@ -135,7 +135,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
             </div>
             <div>
               <span className="text-sm font-bold text-stone-700">似顔絵モード</span>
-              <p className="text-[10px] text-stone-400">{portraitMode ? `ON — ${portraitImage ? '人物写真を読み込み済み' : '人物写真をアップロードしてください'}` : 'OFF — 通常のデザイン生成'}</p>
+              <p className="text-[10px] text-stone-400">{portraitMode ? `ON — ${portraitImage ? '2Dイラストを読み込み済み' : '人物の2Dイラストをアップロードしてください'}` : 'OFF — 通常のデザイン生成'}</p>
             </div>
           </label>
 
@@ -149,8 +149,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                     className="w-14 h-14 object-cover rounded-lg border border-stone-200 flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-stone-700">人物写真</p>
-                    <p className="text-[10px] text-stone-400">この顔を元に似顔絵だるまを生成します</p>
+                    <p className="text-xs font-medium text-stone-700">似顔絵イラスト</p>
+                    <p className="text-[10px] text-stone-400">このイラストを元に似顔絵だるまを生成します</p>
                   </div>
                   <button
                     type="button"
@@ -186,8 +186,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                   <div>
-                    <p className="text-sm font-bold text-red-600">人物写真をアップロード</p>
-                    <p className="text-[10px] text-red-400">顔がはっきり写った写真を選択</p>
+                    <p className="text-sm font-bold text-red-600">人物の2Dイラストをアップロード</p>
+                    <p className="text-[10px] text-red-400">似顔絵・スケッチ・イラスト画像を選択</p>
                   </div>
                 </label>
               )}
