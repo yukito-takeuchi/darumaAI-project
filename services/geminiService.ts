@@ -287,34 +287,33 @@ The attached reference images are provided for visual confirmation. Reproduce al
       : '';
 
     const faceInstruction = request.portrait && portraitDescription
-      ? `Portrait Caricature Design — CRITICAL:
+      ? `Portrait Caricature Design — FOLLOW FORMAT REFERENCE IMAGE EXACTLY:
 
-CONCEPT: A flat 2D illustrated caricature bust portrait of the real person fills the interior of the Daruma egg shape. The egg silhouette is the outer boundary. The person's face and upper body fill the interior naturally.
+The FORMAT REFERENCE IMAGE already provided shows the exact layout to reproduce. Match it precisely.
 
-Person's features from the photo:
+Person's features to reproduce:
 ${portraitDescription}
 
-══ ILLUSTRATION STYLE (applies to ALL 4 views) ══
-- Flat 2D cartoon illustration. Clean black outlines. Solid color fills.
-- NO 3D rendering. NO dark dramatic shadows. NO photorealism.
-- The background inside the egg (areas not covered by the figure) must be a simple light neutral color (light beige or off-white) — NEVER dark or black.
-- All 4 views must be consistent in line weight, color palette, and illustration style.
+══ ILLUSTRATION STYLE ══
+- Flat 2D cartoon illustration only. Clean outlines, solid color fills.
+- The egg silhouette is a perfectly smooth oval — NO 3D surface bumps, NO nose protrusion, NO eye socket indentations, NO physical contours of any kind. The surface is completely flat.
+- Depth is expressed through 2D illustration techniques (color, line) only, never by 3D geometry.
+- NO photorealism. NO 3D rendering. NO shadows on the egg surface.
 
-══ FRONT VIEW ══
-- Face fills upper ~60% of egg interior. Clothing fills lower ~40%.
-- Reproduce face features, hair, skin tone faithfully as a caricature.
-- Reproduce clothing (jacket color, shirt, tie) in actual colors from the photo.
+══ EGG ORIENTATION ══
+- The Daruma egg stands UPRIGHT (vertical). All 4 views are at horizontal eye level — looking straight at the side of the standing egg. NOT from above, NOT top-down.
 
-══ BACK VIEW ══
-- Show back of head (hair, rounded shape of head) in upper portion — flat 2D style.
-- Show back of jacket/suit in lower portion — same flat 2D style.
-- Light neutral background inside egg.
+══ HOW THE ILLUSTRATION FILLS THE EGG (all views) ══
+- The person's illustration completely fills the entire egg outline. No neutral background.
+- Upper ~40%: Hair (voluminous, fills the top curved area of the egg)
+- Middle ~30%: Face (skin tone, eyes, nose, mouth — flat 2D caricature)
+- Lower ~30%: Upper body clothing in the person's actual colors (as described above)
 
-══ SIDE VIEWS (Left & Right) ══
-- Show side profile: face profile (nose, chin, ear visible), side of hair, shoulder and side of jacket.
-- Same flat 2D illustration style, light neutral background inside egg.
-
-Do NOT draw a generic Daruma face. Do NOT show only the face without clothing.`
+══ PER VIEW ══
+FRONT: Face forward, full face visible, clothing below.
+BACK: Back of head (hair) fills top, back of clothing fills bottom. No face visible.
+RIGHT SIDE: Right profile — ear, nose, chin visible as side profile. Hair on top, clothing below.
+LEFT SIDE: Left profile — mirror of right side.`
       : request.referenceImages && request.referenceImages.length > 0
       ? `Face Design — CRITICAL:
 ${characterDescription
@@ -322,14 +321,16 @@ ${characterDescription
   : `Base the Daruma face on the character from the reference images. Reproduce eyes, eyebrows, expression, and distinctive facial features faithfully. Do NOT default to a standard Daruma face.`}`
       : `Face Design: Use a stylized Daruma face appropriate to the style direction.`;
 
-    const silhouetteInstruction = `Silhouette — STRICT CONSTRAINT:
+    const silhouetteInstruction = request.portrait
+      ? `Silhouette: The egg outline is a perfectly smooth upright oval. No physical protrusions of any kind.`
+      : `Silhouette — STRICT CONSTRAINT:
 The Daruma body MUST maintain its traditional smooth oval/egg shape. Physical protrusions are FORBIDDEN.
 Any character appendages (horns, tail, wings, animal ears) MUST be rendered as painted/illustrated decorations ON the surface — not physically extending beyond the oval outline.
 Final silhouette must be a clean, smooth Daruma oval from all 4 angles.`;
 
-    const mainPrompt = `Design a${request.portrait ? ' Portrait (似顔絵) — FLAT 2D ILLUSTRATION STYLE' : ''} Japanese Daruma doll.
+    const mainPrompt = `Design a${request.portrait ? ' Portrait (似顔絵)' : ''} Japanese Daruma doll.
 Variation: Pattern ${index + 1}.
-${request.portrait ? 'Rendering: Flat 2D cartoon illustration. Clean outlines, solid color fills. NOT photorealistic, NOT 3D rendered.' : ''}
+${request.portrait ? 'Style: Flat 2D cartoon illustration. Clean outlines, solid color fills. NOT photorealistic. NOT 3D rendered. NO surface bumps or contours.' : ''}
 Style Direction: ${request.style}.
 Specific Details: ${request.prompt}.
 
@@ -339,13 +340,14 @@ ${silhouetteInstruction}
 
 ${faceInstruction}
 
-${sizeContext}
-${glossyInstruction}
+${request.portrait ? '' : sizeContext}
+${request.portrait ? '' : glossyInstruction}
 
 Required Layout — STRICT:
 Arrange EXACTLY 4 views of the SAME Daruma doll in a SINGLE HORIZONTAL ROW, evenly spaced, on a clean white background.
 Left to right order:  [1. Front]  [2. Back]  [3. Right Side]  [4. Left Side]
 All 4 dolls must be the same size and vertical alignment. Equal gaps between each view.
+${request.portrait ? 'All views are at HORIZONTAL EYE LEVEL — looking straight at the side of the UPRIGHT STANDING egg. NOT top-down, NOT from above.' : ''}
 No 2×2 grid. No stacking. Horizontal line only.
 Do NOT include any text, labels, titles, captions, or annotations anywhere in the image.
 Production-ready, high resolution, sharp details.
