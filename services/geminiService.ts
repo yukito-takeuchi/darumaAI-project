@@ -103,14 +103,15 @@ export const generateDarumaDesigns = async (
     characterDescription = await extractCharacterDescription(ai, request.referenceImages);
   }
 
-  // フォーマット画像を読み込み（似顔絵モード時は portrait フォーマットを使用）
-  const formatPDF = request.portrait ? await loadFormatImage('portrait') : await loadFormatImage(request.size);
+  // フォーマット画像を読み込み（似顔絵モード時はサイズ + portrait 両方を読み込む）
+  const sizeFormatImage = await loadFormatImage(request.size);
+  const portraitFormatImage = request.portrait ? await loadFormatImage('portrait') : null;
 
   // Step 2: 指定枚数を並列生成
   const patternCount = request.patternCount ?? 3;
   const promises = [];
   for (let i = 0; i < patternCount; i++) {
-    promises.push(generateSinglePattern(ai, request, i, characterDescription, formatPDF));
+    promises.push(generateSinglePattern(ai, request, i, characterDescription, sizeFormatImage, portraitFormatImage));
   }
 
   const results = await Promise.all(promises);
@@ -181,18 +182,22 @@ const generateSinglePattern = async (
   request: DesignRequest,
   index: number,
   characterDescription: string = '',
-  formatPDF: { data: string; mimeType: string } | null = null
+  sizeFormatImage: { data: string; mimeType: string } | null = null,
+  portraitFormatImage: { data: string; mimeType: string } | null = null
 ): Promise<GeneratedDesign | null> => {
   try {
     const parts: any[] = [];
 
-    // フォーマット画像（サイズ or 似顔絵）
-    if (formatPDF) {
-      parts.push({ inlineData: { data: formatPDF.data, mimeType: formatPDF.mimeType } });
-      const formatLabel = request.portrait
-        ? `FORMAT REFERENCE IMAGE (Portrait/似顔絵): This image shows the official layout and style for the portrait Daruma doll. Follow this composition, proportions, and illustration style exactly.`
-        : `FORMAT REFERENCE IMAGE (${request.size}): This image shows the official format specification for the ${request.size} Daruma doll. You MUST faithfully reproduce: the exact 3D body shape and proportions, all surface contours and indentations (凹凸), the face area recess depth, the bottom flat base, and any structural details visible in this image.`;
-      parts.push({ text: formatLabel });
+    // 似顔絵フォーマット画像（レイアウト・スタイル参照）
+    if (portraitFormatImage) {
+      parts.push({ inlineData: { data: portraitFormatImage.data, mimeType: portraitFormatImage.mimeType } });
+      parts.push({ text: `FORMAT REFERENCE IMAGE (Portrait/似顔絵): This image shows the official layout and illustration style for the portrait Daruma. Follow this composition, proportions, and flat 2D illustration style exactly.` });
+    }
+
+    // サイズフォーマット画像（形状・寸法参照）
+    if (sizeFormatImage) {
+      parts.push({ inlineData: { data: sizeFormatImage.data, mimeType: sizeFormatImage.mimeType } });
+      parts.push({ text: `FORMAT REFERENCE IMAGE (${request.size}): This image shows the official format specification for the ${request.size} Daruma doll. You MUST faithfully reproduce: the exact body shape, proportions, and structural details shown in this image.` });
     }
 
     // 似顔絵2Dイラスト / 通常の参考画像（視覚的グラウンディング用）
@@ -268,6 +273,8 @@ CHARACTER DESCRIPTION (extracted from the 2D illustration reference):
 ${characterSection}
 
 Reproduce the character's face, hair, and clothing faithfully in the same flat 2D illustration style as the reference.
+
+FILL RULE: The character illustration must fill 100% of the egg interior. No white space, no background visible inside the egg outline. Hair fills the top, face fills the middle, clothing fills the bottom — edge to edge.
 
 Layout: 4 views (Front / Back / Right Side / Left Side) in a SINGLE HORIZONTAL ROW on a clean white background. Equal size and spacing. No text, no labels, no annotations.`
       : `Design a Japanese Daruma doll. Variation: Pattern ${index + 1}.
