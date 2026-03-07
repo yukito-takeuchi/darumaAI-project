@@ -27,32 +27,47 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   if (results.length === 0) return null;
 
-  const handleDownloadPDF = (imageUrl: string, filename: string, extension: 'pdf' | 'ai') => {
-    // A4 Landscape size in mm
-    // A4 is 297 x 210 mm
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
+  const handleDownloadPDF = (imageUrl: string, filename: string) => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const imgProps = doc.getImageProperties(imageUrl);
     const pdfWidth = doc.internal.pageSize.getWidth();
     const pdfHeight = doc.internal.pageSize.getHeight();
-    
-    // Scale image to fit page with some margin
     const margin = 10;
-    const availableWidth = pdfWidth - (margin * 2);
-    const availableHeight = pdfHeight - (margin * 2);
-    
-    const ratio = Math.min(availableWidth / imgProps.width, availableHeight / imgProps.height);
+    const ratio = Math.min((pdfWidth - margin * 2) / imgProps.width, (pdfHeight - margin * 2) / imgProps.height);
     const w = imgProps.width * ratio;
     const h = imgProps.height * ratio;
-    const x = (pdfWidth - w) / 2;
-    const y = (pdfHeight - h) / 2;
+    doc.addImage(imageUrl, 'PNG', (pdfWidth - w) / 2, (pdfHeight - h) / 2, w, h);
+    doc.save(`${filename}.pdf`);
+  };
 
-    doc.addImage(imageUrl, 'PNG', x, y, w, h);
-    doc.save(`${filename}.${extension}`);
+  const handleDownloadSVG = (imageUrl: string, filename: string) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.width;
+      const h = img.height;
+      const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <!-- Layer: print-area (embedded raster image) -->
+  <g id="print-area">
+    <image x="0" y="0" width="${w}" height="${h}" xlink:href="${imageUrl}" />
+  </g>
+  <!-- Layer: cut-line (vector, editable in Illustrator) -->
+  <g id="cut-line">
+    <rect x="1" y="1" width="${w - 2}" height="${h - 2}"
+          fill="none" stroke="#FF0000" stroke-width="2"
+          stroke-dasharray="10,5" />
+  </g>
+</svg>`;
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    img.src = imageUrl;
   };
 
   const handleRefineSubmit = async (id: string) => {
@@ -174,19 +189,19 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                    <div className="flex flex-col gap-2 mt-auto">
                      {/* Download Buttons */}
                      <div className="grid grid-cols-2 gap-2">
-                       <button 
-                          onClick={() => handleDownloadPDF(design.imageUrl, `daruma-design-${index + 1}`, 'pdf')}
+                       <button
+                          onClick={() => handleDownloadPDF(design.imageUrl, `daruma-design-${index + 1}`)}
                           disabled={isRefining}
                           className="py-2 px-2 bg-stone-800 text-white rounded-lg text-xs font-bold hover:bg-stone-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
                        >
                           PDF
                        </button>
-                       <button 
-                          onClick={() => handleDownloadPDF(design.imageUrl, `daruma-design-${index + 1}`, 'ai')}
+                       <button
+                          onClick={() => handleDownloadSVG(design.imageUrl, `daruma-design-${index + 1}`)}
                           disabled={isRefining}
                           className="py-2 px-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-500 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
                        >
-                          AI形式
+                          SVG (AI編集用)
                        </button>
                      </div>
                       <a 
