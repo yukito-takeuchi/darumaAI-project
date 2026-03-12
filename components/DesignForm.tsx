@@ -13,7 +13,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
   const [glossy, setGlossy] = useState(true);
   const [brandColorEnabled, setBrandColorEnabled] = useState<[boolean, boolean, boolean]>([false, false, false]);
   const [brandColors, setBrandColors] = useState<[string, string, string]>(['#E60012', '#FFFFFF', '#000000']);
-  const [patternCount, setPatternCount] = useState<3 | 6>(3);
+  const [patternCount, setPatternCount] = useState<1 | 3 | 6>(3);
   const [portraitMode, setPortraitMode] = useState(false);
   const [portraitImage, setPortraitImage] = useState<{ data: string; mimeType: string } | null>(null);
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
@@ -135,7 +135,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
             </div>
             <div>
               <span className="text-sm font-bold text-stone-700">似顔絵モード</span>
-              <p className="text-[10px] text-stone-400">{portraitMode ? `ON — ${portraitImage ? '人物写真を読み込み済み' : '人物写真をアップロードしてください'}` : 'OFF — 通常のデザイン生成'}</p>
+              <p className="text-[10px] text-stone-400">{portraitMode ? `ON — ${portraitImage ? '2Dイラストを読み込み済み' : '人物の2Dイラストをアップロードしてください'}` : 'OFF — 通常のデザイン生成'}</p>
             </div>
           </label>
 
@@ -149,8 +149,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                     className="w-14 h-14 object-cover rounded-lg border border-stone-200 flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-stone-700">人物写真</p>
-                    <p className="text-[10px] text-stone-400">この顔を元に似顔絵だるまを生成します</p>
+                    <p className="text-xs font-medium text-stone-700">似顔絵イラスト</p>
+                    <p className="text-[10px] text-stone-400">このイラストを元に似顔絵だるまを生成します</p>
                   </div>
                   <button
                     type="button"
@@ -186,8 +186,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                   <div>
-                    <p className="text-sm font-bold text-red-600">人物写真をアップロード</p>
-                    <p className="text-[10px] text-red-400">顔がはっきり写った写真を選択</p>
+                    <p className="text-sm font-bold text-red-600">人物の2Dイラストをアップロード</p>
+                    <p className="text-[10px] text-red-400">似顔絵・スケッチ・イラスト画像を選択</p>
                   </div>
                 </label>
               )}
@@ -400,8 +400,8 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
           {/* 枚数切り替え */}
           <div>
             <p className="text-xs font-bold text-stone-500 mb-2">生成枚数</p>
-            <div className="grid grid-cols-2 gap-2">
-              {([3, 6] as const).map(n => (
+            <div className="grid grid-cols-3 gap-2">
+              {([1, 3, 6] as const).map(n => (
                 <label key={n} className={`
                   cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center gap-1 transition-all
                   ${patternCount === n ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 hover:border-stone-300 text-stone-500'}
@@ -415,7 +415,7 @@ export const DesignForm: React.FC<DesignFormProps> = ({ onGenerate, status }) =>
                     className="hidden"
                   />
                   <span className="font-bold text-base">{n}枚</span>
-                  <span className="text-[10px]">{n === 3 ? 'スタンダード（推奨）' : 'ワイド（クレジット消費大）'}</span>
+                  <span className="text-[10px]">{n === 1 ? 'テスト用' : n === 3 ? 'スタンダード（推奨）' : 'ワイド（クレジット消費大）'}</span>
                 </label>
               ))}
             </div>
